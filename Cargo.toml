@@ -1,0 +1,12 @@
+[package]
+authors = ["Garrett Berg <googberg@gmail.com>"]
+name = "path_abs"
+version = "0.1.0"
+
+[dependencies]
+serde = "1.*"
+stfu8 = "0.1.1"
+
+[dev-dependencies]
+pretty_assertions = "0.4.1"
+tempdir = "0.3.5"
