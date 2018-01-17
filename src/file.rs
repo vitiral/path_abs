@@ -13,7 +13,7 @@ use super::PathAbs;
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An absolute path to a file that exists, with associated methods.
-pub struct PathFile(PathAbs);
+pub struct PathFile(pub(crate) PathAbs);
 
 impl PathFile {
     /// Instantiate a new `PathFile`. The file must exist or `io::Error` will be returned.

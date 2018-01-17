@@ -44,10 +44,73 @@ pub use dir::PathDir;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag="type", content="path", rename_all="lowercase")]
-/// An enum representing the known types of the paths.
+/// An enum representing absolute paths of known types.
 pub enum PathType {
     File(PathFile),
     Dir(PathDir),
+}
+
+impl PathType {
+    /// Resolves and returns the `PathType` of the given path.
+    ///
+    /// > If the path exists but is not a file or a directory (i.e. is a symlink), then
+    /// > `io::ErrorKind::InvalidInput` is returned.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathType;
+    ///
+    /// # fn main() {
+    /// let src = PathType::new("src").unwrap();
+    /// # }
+    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathType> {
+        let abs = PathAbs::new(path)?;
+        let ty = abs.metadata()?.file_type();
+        if ty.is_file() {
+            Ok(PathType::File(PathFile(abs)))
+        } else if ty.is_dir() {
+            Ok(PathType::Dir(PathDir(abs)))
+        } else {
+            Err(io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir or a file"))
+        }
+    }
+
+    /// Unwrap the `PathType` as a `PathFile`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathType;
+    ///
+    /// # fn main() {
+    /// let lib = PathType::new("src/lib.rs").unwrap().unwrap_file();
+    /// # }
+    pub fn unwrap_file(self) -> Option<PathFile> {
+        if let PathType::File(f) = self {
+            Some(f)
+        } else {
+            None
+        }
+    }
+
+    /// Unwrap the `PathType` as a `PathDir`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathType;
+    ///
+    /// # fn main() {
+    /// let src = PathType::new("src").unwrap().unwrap_dir();
+    /// # }
+    pub fn unwrap_dir(self) -> Option<PathDir> {
+        if let PathType::Dir(d) = self {
+            Some(d)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]

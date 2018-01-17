@@ -8,7 +8,7 @@ use std::convert::AsRef;
 
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
-use super::PathAbs;
+use super::{PathAbs, PathType};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An absolute path to a directory that exists, with associated methods.
@@ -115,7 +115,7 @@ impl PathDir {
         PathDir::new(path)
     }
 
-    /// Join a path onto the `PathDir`, expecting it to exist. Returns the resulting `PathDir`.
+    /// Join a path onto the `PathDir`, expecting it to exist. Returns the resulting `PathType`.
     ///
     /// # Examples
     /// ```rust
@@ -124,18 +124,40 @@ impl PathDir {
     ///
     /// # fn main() {
     /// let src = PathDir::new("src").unwrap();
-    /// let lib = src.join_abs("lib.rs").unwrap().to_file().unwrap();
+    /// let lib = src.join_abs("lib.rs").unwrap().unwrap_file().unwrap();
     /// # }
     /// ```
-    pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> io::Result<PathAbs> {
+    pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> io::Result<PathType> {
         let joined = self.join(path.as_ref());
-        PathAbs::new(joined)
+        PathType::new(joined)
     }
 
-    // pub fn list(&self) -> ReadDir {
+    /// List the contents of the directory, returning an iterator of `PathType`s.
+    pub fn list(&self) -> io::Result<ListDir> {
+        Ok(ListDir {fsread: fs::read_dir(self)?})
+    }
 
-    // }
+}
 
+/// An iterator over `PathType` objects, returned by `PathDir::list`.
+pub struct ListDir {
+    fsread: fs::ReadDir,
+}
+
+impl ::std::iter::Iterator for ListDir {
+    type Item = io::Result<PathType>;
+    fn next(&mut self) -> Option<io::Result<PathType>> {
+        let entry = match self.fsread.next() {
+            Some(r) => {
+                match r {
+                    Ok(e) => e,
+                    Err(err) => return Some(Err(err)),
+                }
+            },
+            None => return None,
+        };
+        Some(PathType::new(entry.path()))
+    }
 }
 
 impl fmt::Debug for PathDir {

@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for PathAbs {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PathAbs, PathDir, PathFile, FileType};
+    use super::super::{PathAbs, PathDir, PathFile, PathType};
 
     #[test]
     fn sanity_serde() {
@@ -89,7 +89,7 @@ mod tests {
         let result_str = serde_json::to_string(&expected).unwrap();
         assert_eq!(expected_str, result_str);
 
-        let result: Vec<FileType> = serde_json::from_str(&result_str).unwrap();
+        let result: Vec<PathType> = serde_json::from_str(&result_str).unwrap();
         assert_eq!(expected, result);
     }
 }
