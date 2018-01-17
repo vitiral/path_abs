@@ -134,6 +134,10 @@ impl PathDir {
 
     /// List the contents of the directory, returning an iterator of `PathType`s.
     ///
+    /// > **Warning**: because `PathAbs` is the canonicalized path, symlinks are always resolved.
+    /// > This means that if the directory contains a symlink you may get a path from a completely
+    /// > _different directory_.
+    ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
@@ -161,6 +165,11 @@ impl PathDir {
     /// # }
     pub fn list(&self) -> io::Result<ListDir> {
         Ok(ListDir {fsread: fs::read_dir(self)?})
+    }
+
+    /// Create a mock dir type. *For use in tests only*.
+    pub fn mock<P: AsRef<Path>>(path: P) -> PathDir {
+        PathDir(PathAbs::mock(path))
     }
 }
 

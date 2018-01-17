@@ -22,11 +22,11 @@ extern crate tempdir;
 #[cfg(test)]
 extern crate serde_json;
 
+use std::convert::AsRef;
 use std::io;
 use std::fs;
 use std::fmt;
 use std::ops::Deref;
-use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 
 mod dir;
@@ -45,6 +45,13 @@ pub use dir::PathDir;
 #[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag="type", content="path", rename_all="lowercase")]
 /// An enum representing absolute paths of known types.
+///
+/// This is used primarily for:
+/// - The items returned from `PathDir::list`
+/// - Serializing paths of different types.
+///
+/// > Note: symlinks are not supported because they are
+/// > *impossible* for canonicalized paths.
 pub enum PathType {
     File(PathFile),
     Dir(PathDir),
@@ -110,6 +117,34 @@ impl PathType {
         } else {
             None
         }
+    }
+
+    /// Return whether this variant is `PathType::Dir`.
+    pub fn is_dir(&self) -> bool {
+        if let PathType::Dir(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Return whether this variant is `PathType::File`.
+    pub fn is_file(&self) -> bool {
+        if let PathType::File(_) = *self {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Create a mock file type. *For use in tests only*.
+    pub fn mock_file<P: AsRef<Path>>(path: P) -> PathType {
+        PathType::File(PathFile::mock(path))
+    }
+
+    /// Create a mock dir type. *For use in tests only*.
+    pub fn mock_dir<P: AsRef<Path>>(path: P) -> PathType {
+        PathType::Dir(PathDir::mock(path))
     }
 }
 

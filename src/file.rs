@@ -177,6 +177,11 @@ impl PathFile {
         }
         f.write_all(s.as_bytes())
     }
+
+    /// Create a mock file type. *For use in tests only*.
+    pub fn mock<P: AsRef<Path>>(path: P) -> PathFile {
+        PathFile(PathAbs::mock(path))
+    }
 }
 
 impl fmt::Debug for PathFile {
