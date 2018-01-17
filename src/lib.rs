@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * */
 
-//! Absolute and serializable paths
+//! Extensions to stdlib `Path` types, plus the `PathAbs` type.
 //!
 //! [`PathAbs`](structs.PathAbs.html) adds a much needed type to the rust ecosystem:
 //! a path which is guaranteed to exist, is serializable, and is creatable through
@@ -45,8 +45,6 @@ use std::ops::Deref;
 use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-
 // #[cfg(test)]
 // mod tests;
 
@@ -67,8 +65,8 @@ impl PathAbs {
     ///
     /// # Examples
     /// ```rust
-    /// extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// extern crate path_ext;
+    /// use path_ext::PathAbs;
     ///
     /// # fn main() {
     /// let lib = PathAbs::new("src/lib.rs").unwrap();
@@ -82,8 +80,8 @@ impl PathAbs {
     ///
     /// # Examples
     /// ```rust
-    /// extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// extern crate path_ext;
+    /// use path_ext::PathAbs;
     ///
     /// # fn main() {
     ///
@@ -109,8 +107,8 @@ impl PathAbs {
     ///
     /// # Examples
     /// ```rust
-    /// extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// extern crate path_ext;
+    /// use path_ext::PathAbs;
     ///
     /// # fn main() {
     ///
@@ -139,8 +137,8 @@ impl PathAbs {
     ///
     /// # Examples
     /// ```rust
-    /// extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// extern crate path_ext;
+    /// use path_ext::PathAbs;
     ///
     /// # fn main() {
     ///
@@ -193,23 +191,23 @@ impl Deref for PathAbs {
     }
 }
 
-impl Serialize for PathAbs {
-    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.raw)
-    }
-}
-
-impl<'de> Deserialize<'de> for PathAbs {
-    fn deserialize<D>(deserializer: D) -> result::Result<PathAbs, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let p = String::deserialize(deserializer)?;
-        let p = stfu8::decode(&s)
-            .map_err(serde::de::Error::custom)?;
-        PathAbs::new(&p).map_err(serde::de::Error::custom)
-    }
-}
+// impl Serialize for PathAbs {
+//     fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
+//     where
+//         S: Serializer,
+//     {
+//         serializer.serialize_str(&self.raw)
+//     }
+// }
+//
+// impl<'de> Deserialize<'de> for PathAbs {
+//     fn deserialize<D>(deserializer: D) -> result::Result<PathAbs, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         let p = String::deserialize(deserializer)?;
+//         let p = stfu8::decode(&s)
+//             .map_err(serde::de::Error::custom)?;
+//         PathAbs::new(&p).map_err(serde::de::Error::custom)
+//     }
+// }

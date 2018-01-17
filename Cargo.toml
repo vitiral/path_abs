@@ -1,11 +1,11 @@
 [package]
 authors = ["Garrett Berg <googberg@gmail.com>"]
-name = "path_abs"
+name = "path_ext"
 version = "0.1.0"
 
 [dependencies]
 serde = ">=1.0"
-stfu8 = ">=0.1"
+stfu8 = ">=0.2"
 
 [dev-dependencies]
 pretty_assertions = "0.4.1"
