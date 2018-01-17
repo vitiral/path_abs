@@ -1,5 +1,4 @@
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-use std::result;
 use std::ffi::OsStr;
 use stfu8;
 
@@ -14,7 +13,7 @@ use super::PathAbs;
 
 impl Serialize for PathAbs {
     #[cfg(unix)]
-    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -24,7 +23,7 @@ impl Serialize for PathAbs {
     }
 
     #[cfg(windows)]
-    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -36,7 +35,7 @@ impl Serialize for PathAbs {
 
 impl<'de> Deserialize<'de> for PathAbs {
     #[cfg(unix)]
-    fn deserialize<D>(deserializer: D) -> result::Result<PathAbs, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -47,7 +46,7 @@ impl<'de> Deserialize<'de> for PathAbs {
     }
 
     #[cfg(windows)]
-    fn deserialize<D>(deserializer: D) -> result::Result<PathAbs, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -58,33 +57,39 @@ impl<'de> Deserialize<'de> for PathAbs {
     }
 }
 
-#[test]
-fn sanity_serde() {
-    use serde_json;
-    use tempdir::TempDir;
 
-    let tmp_dir = TempDir::new("example").expect("create temp dir");
-    let tmp_abs = PathAbs::new(tmp_dir.path()).unwrap();
+#[cfg(test)]
+mod tests {
+    use super::super::{PathAbs, PathDir, PathFile, FileType};
 
-    let foo = PathAbs::create_file(tmp_abs.join("foo.txt")).unwrap();
-    let bar_dir = PathAbs::create_dir(tmp_abs.join("bar")).unwrap();
-    let foo_bar_dir = PathAbs::create_dir_all(tmp_abs.join("foo/bar")).unwrap();
+    #[test]
+    fn sanity_serde() {
+        use serde_json;
+        use tempdir::TempDir;
 
-    let expected = vec![
-        foo,
-        bar_dir,
-        foo_bar_dir,
-    ];
+        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_abs = PathDir::new(tmp_dir.path()).unwrap();
 
-    let expected_str = format!("[\
-         \"{0}/foo.txt\",\
-         \"{0}/bar\",\
-         \"{0}/foo/bar\"\
-    ]", tmp_abs.to_string_lossy().as_ref());
+        let foo = PathFile::create(tmp_abs.join("foo.txt")).unwrap();
+        let bar_dir = PathDir::create(tmp_abs.join("bar")).unwrap();
+        let foo_bar_dir = PathDir::create_all(tmp_abs.join("foo/bar")).unwrap();
 
-    let result_str = serde_json::to_string(&expected).unwrap();
-    assert_eq!(expected_str, result_str);
+        let expected = vec![
+            PathType::File(foo),
+            PathType::Dir(bar_dir),
+            PathType::Dir(foo_bar_dir),
+        ];
 
-    let result: Vec<PathAbs> = serde_json::from_str(&result_str).unwrap();
-    assert_eq!(expected, result);
+        let expected_str = format!("[\
+             {{\"type\":\"file\",\"path\":\"{0}/foo.txt\"}},\
+             {{\"type\":\"dir\",\"path\":\"{0}/bar\"}},\
+             {{\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}}\
+        ]", tmp_abs.to_string_lossy().as_ref());
+
+        let result_str = serde_json::to_string(&expected).unwrap();
+        assert_eq!(expected_str, result_str);
+
+        let result: Vec<FileType> = serde_json::from_str(&result_str).unwrap();
+        assert_eq!(expected, result);
+    }
 }

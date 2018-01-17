@@ -10,6 +10,8 @@
 //! even in the case of what *would be* ill-formed UTF-16.
 
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate stfu8;
 
 #[macro_use]
@@ -29,7 +31,7 @@ use std::path::{Path, PathBuf};
 
 mod dir;
 mod file;
-// mod ser;
+mod ser;
 
 pub use file::PathFile;
 pub use dir::PathDir;
@@ -39,6 +41,14 @@ pub use dir::PathDir;
 
 // ------------------------------
 // -- EXPORTED TYPES / METHODS
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(tag="type", content="path", rename_all="lowercase")]
+/// An enum representing the known types of the paths.
+pub enum PathType {
+    File(PathFile),
+    Dir(PathDir),
+}
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An path which is guaranteed to:
@@ -77,7 +87,7 @@ impl PathAbs {
 
     /// Get the parent directory of this path as a `PathDir`.
     ///
-    /// > This does not make additinal syscalls, as the parent by definition must be a directory >
+    /// > This does not make additinal syscalls, as the parent by definition must be a directory
     /// > and exist.
     ///
     /// # Examples
