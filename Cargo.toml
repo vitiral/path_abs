@@ -4,9 +4,11 @@ version = "0.2.1"
 authors = ["Garrett Berg <googberg@gmail.com>"]
 description = "Absolute serializable path types and associated methods."
 keywords = [
-    "cli",
+    "filesystem",
     "path",
+    "cli",
     "serde",
+    "serialize",
 ]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
