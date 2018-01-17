@@ -1,7 +1,17 @@
 [package]
-authors = ["Garrett Berg <googberg@gmail.com>"]
 name = "path_abs"
 version = "0.1.0"
+authors = ["Garrett Berg <googberg@gmail.com>"]
+description = "Absolute serializable path types and associated methods."
+keywords = [
+    "cli",
+    "path",
+    "serde",
+]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+documentation = "https://docs.rs/path_abs"
+repository = "https://github.com/vitiral/path_abs"
 
 [dependencies]
 serde = ">=1.0"

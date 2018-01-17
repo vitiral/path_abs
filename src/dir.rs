@@ -1,4 +1,10 @@
-
+/* Copyright (c) 2018 Garrett Berg, vitiral@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
+ */
 use std::fs;
 use std::fmt;
 use std::io;
@@ -17,7 +23,7 @@ pub struct PathDir(pub(crate) PathAbs);
 impl PathDir {
     /// Instantiate a new `PathDir`. The directory must exist or `io::Error` will be returned.
     ///
-    /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
+    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a dir.
     ///
     /// # Examples
     /// ```rust
@@ -57,7 +63,10 @@ impl PathDir {
         if abs.is_dir() {
             Ok(PathDir(abs))
         } else {
-            Err(io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir"))
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path is not a dir",
+            ))
         }
     }
 
@@ -83,7 +92,7 @@ impl PathDir {
     pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
-                io::ErrorKind::AlreadyExists => {},
+                io::ErrorKind::AlreadyExists => {}
                 _ => return Err(err),
             }
         }
@@ -164,10 +173,14 @@ impl PathDir {
     /// assert_eq!(expected, result);
     /// # }
     pub fn list(&self) -> io::Result<ListDir> {
-        Ok(ListDir {fsread: fs::read_dir(self)?})
+        Ok(ListDir {
+            fsread: fs::read_dir(self)?,
+        })
     }
 
     /// Create a mock dir type. *For use in tests only*.
+    ///
+    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
     pub fn mock<P: AsRef<Path>>(path: P) -> PathDir {
         PathDir(PathAbs::mock(path))
     }
@@ -182,11 +195,9 @@ impl ::std::iter::Iterator for ListDir {
     type Item = io::Result<PathType>;
     fn next(&mut self) -> Option<io::Result<PathType>> {
         let entry = match self.fsread.next() {
-            Some(r) => {
-                match r {
-                    Ok(e) => e,
-                    Err(err) => return Some(Err(err)),
-                }
+            Some(r) => match r {
+                Ok(e) => e,
+                Err(err) => return Some(Err(err)),
             },
             None => return None,
         };
@@ -208,13 +219,13 @@ impl AsRef<PathAbs> for PathDir {
 
 impl AsRef<Path> for PathDir {
     fn as_ref(&self) -> &Path {
-        &self.0.as_ref()
+        self.0.as_ref()
     }
 }
 
 impl AsRef<PathBuf> for PathDir {
     fn as_ref(&self) -> &PathBuf {
-        &self.0.as_ref()
+        self.0.as_ref()
     }
 }
 
@@ -247,7 +258,6 @@ impl<'de> Deserialize<'de> for PathDir {
 
 #[cfg(test)]
 mod tests {
-    use serde_json;
     use tempdir::TempDir;
     use std::collections::HashSet;
     use super::super::{PathDir, PathFile, PathType};
@@ -270,6 +280,5 @@ mod tests {
         expected.insert(PathType::File(bar_file));
 
         assert_eq!(expected, result);
-
     }
 }

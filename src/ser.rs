@@ -1,3 +1,10 @@
+/* Copyright (c) 2018 Garrett Berg, vitiral@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
+ */
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use std::ffi::OsStr;
 use stfu8;
@@ -18,7 +25,7 @@ impl Serialize for PathAbs {
         S: Serializer,
     {
         let bytes = self.as_os_str().as_bytes();
-        let stfu = stfu8::encode_u8(&bytes);
+        let stfu = stfu8::encode_u8(bytes);
         serializer.serialize_str(&stfu)
     }
 
@@ -40,8 +47,7 @@ impl<'de> Deserialize<'de> for PathAbs {
         D: Deserializer<'de>,
     {
         let p = String::deserialize(deserializer)?;
-        let p = stfu8::decode_u8(&p)
-            .map_err(serde::de::Error::custom)?;
+        let p = stfu8::decode_u8(&p).map_err(serde::de::Error::custom)?;
         PathAbs::new(OsStr::from_bytes(&p)).map_err(serde::de::Error::custom)
     }
 
@@ -51,16 +57,14 @@ impl<'de> Deserialize<'de> for PathAbs {
         D: Deserializer<'de>,
     {
         let p = String::deserialize(deserializer)?;
-        let p = stfu8::decode_u16(&p)
-            .map_err(serde::de::Error::custom)?;
+        let p = stfu8::decode_u16(&p).map_err(serde::de::Error::custom)?;
         PathAbs::new(OsString::from_wide(&p)).map_err(serde::de::Error::custom)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::super::{PathAbs, PathDir, PathFile, PathType};
+    use super::super::{PathDir, PathFile, PathType};
 
     #[test]
     fn sanity_serde() {
@@ -80,11 +84,14 @@ mod tests {
             PathType::Dir(foo_bar_dir),
         ];
 
-        let expected_str = format!("[\
+        let expected_str = format!(
+            "[\
              {{\"type\":\"file\",\"path\":\"{0}/foo.txt\"}},\
              {{\"type\":\"dir\",\"path\":\"{0}/bar\"}},\
              {{\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}}\
-        ]", tmp_abs.to_string_lossy().as_ref());
+             ]",
+            tmp_abs.to_string_lossy().as_ref()
+        );
 
         let result_str = serde_json::to_string(&expected).unwrap();
         assert_eq!(expected_str, result_str);

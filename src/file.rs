@@ -1,4 +1,10 @@
-
+/* Copyright (c) 2018 Garrett Berg, vitiral@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
+ */
 use std::fs;
 use std::fmt;
 use std::io;
@@ -18,7 +24,7 @@ pub struct PathFile(pub(crate) PathAbs);
 impl PathFile {
     /// Instantiate a new `PathFile`. The file must exist or `io::Error` will be returned.
     ///
-    /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
+    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a file.
     ///
     /// # Examples
     /// ```rust
@@ -58,7 +64,10 @@ impl PathFile {
         if abs.is_file() {
             Ok(PathFile(abs))
         } else {
-            Err(io::Error::new(io::ErrorKind::InvalidInput, "path is not a file"))
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path is not a file",
+            ))
         }
     }
 
@@ -82,10 +91,7 @@ impl PathFile {
     /// # }
     /// ```
     pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathFile> {
-        fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(&path)?;
+        fs::OpenOptions::new().write(true).create(true).open(&path)?;
         PathFile::new(path)
     }
 
@@ -108,9 +114,7 @@ impl PathFile {
     /// # }
     /// ```
     pub fn read_string(&self) -> io::Result<String> {
-        let mut f = fs::OpenOptions::new()
-            .read(true)
-            .open(self)?;
+        let mut f = fs::OpenOptions::new().read(true).open(self)?;
         let mut out = String::with_capacity(f.metadata()?.len() as usize);
         f.read_to_string(&mut out)?;
         Ok(out)
@@ -168,10 +172,7 @@ impl PathFile {
     /// # }
     /// ```
     pub fn append_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(self)?;
+        let mut f = fs::OpenOptions::new().append(true).create(true).open(self)?;
         if s.is_empty() {
             return Ok(());
         }
@@ -179,6 +180,8 @@ impl PathFile {
     }
 
     /// Create a mock file type. *For use in tests only*.
+    ///
+    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
     pub fn mock<P: AsRef<Path>>(path: P) -> PathFile {
         PathFile(PathAbs::mock(path))
     }
@@ -198,13 +201,13 @@ impl AsRef<PathAbs> for PathFile {
 
 impl AsRef<Path> for PathFile {
     fn as_ref(&self) -> &Path {
-        &self.0.as_ref()
+        self.0.as_ref()
     }
 }
 
 impl AsRef<PathBuf> for PathFile {
     fn as_ref(&self) -> &PathBuf {
-        &self.0.as_ref()
+        self.0.as_ref()
     }
 }
 

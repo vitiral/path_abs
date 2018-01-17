@@ -1,3 +1,10 @@
+/* Copyright (c) 2018 Garrett Berg, vitiral@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
+ */
 //! Extensions to stdlib `Path` types, plus the `PathAbs` type.
 //!
 //! [`PathAbs`](structs.PathAbs.html) adds a much needed type to the rust ecosystem:
@@ -18,13 +25,12 @@ extern crate stfu8;
 #[cfg(test)]
 extern crate pretty_assertions;
 #[cfg(test)]
-extern crate tempdir;
-#[cfg(test)]
 extern crate serde_json;
+#[cfg(test)]
+extern crate tempdir;
 
 use std::convert::AsRef;
 use std::io;
-use std::fs;
 use std::fmt;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
@@ -32,121 +38,11 @@ use std::path::{Path, PathBuf};
 mod dir;
 mod file;
 mod ser;
+mod ty;
 
-pub use file::PathFile;
 pub use dir::PathDir;
-
-// #[cfg(test)]
-// mod tests;
-
-// ------------------------------
-// -- EXPORTED TYPES / METHODS
-
-#[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(tag="type", content="path", rename_all="lowercase")]
-/// An enum representing absolute paths of known types.
-///
-/// This is used primarily for:
-/// - The items returned from `PathDir::list`
-/// - Serializing paths of different types.
-///
-/// > Note: symlinks are not supported because they are
-/// > *impossible* for canonicalized paths.
-pub enum PathType {
-    File(PathFile),
-    Dir(PathDir),
-}
-
-impl PathType {
-    /// Resolves and returns the `PathType` of the given path.
-    ///
-    /// > If the path exists but is not a file or a directory (i.e. is a symlink), then
-    /// > `io::ErrorKind::InvalidInput` is returned.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathType;
-    ///
-    /// # fn main() {
-    /// let src = PathType::new("src").unwrap();
-    /// # }
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathType> {
-        let abs = PathAbs::new(path)?;
-        let ty = abs.metadata()?.file_type();
-        if ty.is_file() {
-            Ok(PathType::File(PathFile(abs)))
-        } else if ty.is_dir() {
-            Ok(PathType::Dir(PathDir(abs)))
-        } else {
-            Err(io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir or a file"))
-        }
-    }
-
-    /// Unwrap the `PathType` as a `PathFile`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathType;
-    ///
-    /// # fn main() {
-    /// let lib = PathType::new("src/lib.rs").unwrap().unwrap_file();
-    /// # }
-    pub fn unwrap_file(self) -> Option<PathFile> {
-        if let PathType::File(f) = self {
-            Some(f)
-        } else {
-            None
-        }
-    }
-
-    /// Unwrap the `PathType` as a `PathDir`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathType;
-    ///
-    /// # fn main() {
-    /// let src = PathType::new("src").unwrap().unwrap_dir();
-    /// # }
-    pub fn unwrap_dir(self) -> Option<PathDir> {
-        if let PathType::Dir(d) = self {
-            Some(d)
-        } else {
-            None
-        }
-    }
-
-    /// Return whether this variant is `PathType::Dir`.
-    pub fn is_dir(&self) -> bool {
-        if let PathType::Dir(_) = *self {
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Return whether this variant is `PathType::File`.
-    pub fn is_file(&self) -> bool {
-        if let PathType::File(_) = *self {
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Create a mock file type. *For use in tests only*.
-    pub fn mock_file<P: AsRef<Path>>(path: P) -> PathType {
-        PathType::File(PathFile::mock(path))
-    }
-
-    /// Create a mock dir type. *For use in tests only*.
-    pub fn mock_dir<P: AsRef<Path>>(path: P) -> PathType {
-        PathType::Dir(PathDir::mock(path))
-    }
-}
+pub use file::PathFile;
+pub use ty::PathType;
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An path which is guaranteed to:
@@ -175,11 +71,13 @@ impl PathAbs {
         Ok(PathAbs(path.as_ref().canonicalize()?))
     }
 
-    pub fn to_file(self) -> io::Result<PathFile> {
+    /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
+    pub fn into_file(self) -> io::Result<PathFile> {
         PathFile::from_abs(self)
     }
 
-    pub fn to_dir(self) -> io::Result<PathDir> {
+    /// Resolve the `PathAbs` as a `PathDir`. Return an error if it is not a directory.
+    pub fn into_dir(self) -> io::Result<PathDir> {
         PathDir::from_abs(self)
     }
 
@@ -263,4 +161,3 @@ impl Deref for PathAbs {
         &self.0
     }
 }
-
