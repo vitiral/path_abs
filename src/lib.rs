@@ -75,6 +75,29 @@ impl PathAbs {
         PathDir::from_abs(self)
     }
 
+    /// Get the parent directory of this path as a `PathDir`.
+    ///
+    /// > This does not make additinal syscalls, as the parent by definition must be a directory >
+    /// > and exist.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::{PathDir, PathFile};
+    ///
+    /// # fn main() {
+    /// let lib = PathFile::new("src/lib.rs").unwrap();
+    /// let src = lib.parent_dir().unwrap();
+    /// assert_eq!(PathDir::new("src").unwrap(), src);
+    /// # }
+    /// ```
+    pub fn parent_dir(&self) -> Option<PathDir> {
+        match self.parent() {
+            Some(p) => Some(PathDir(PathAbs(p.to_path_buf()))),
+            None => None,
+        }
+    }
+
     /// For constructing mocked paths during tests. This is effectively the same as a `PathBuf`.
     ///
     /// This is NOT checked for validity so the file may or may not actually exist and will
