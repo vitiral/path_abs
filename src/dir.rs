@@ -81,7 +81,7 @@ impl PathDir {
     ///
     /// let example = "target/example";
     ///
-    /// # let _ = ::std::fs::remove_dir(example);
+    /// # let _ = ::std::fs::remove_dir_all(example);
     ///
     /// let dir = PathDir::create(example).unwrap();
     ///
@@ -133,7 +133,8 @@ impl PathDir {
     ///
     /// # fn main() {
     /// let src = PathDir::new("src").unwrap();
-    /// let lib = src.join_abs("lib.rs").unwrap().unwrap_file().unwrap();
+    /// let lib = src.join_abs("lib.rs").unwrap().unwrap_file();
+    /// assert!(lib.is_file());
     /// # }
     /// ```
     pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> io::Result<PathType> {

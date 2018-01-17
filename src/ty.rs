@@ -67,11 +67,11 @@ impl PathType {
     /// # fn main() {
     /// let lib = PathType::new("src/lib.rs").unwrap().unwrap_file();
     /// # }
-    pub fn unwrap_file(self) -> Option<PathFile> {
+    pub fn unwrap_file(self) -> PathFile {
         if let PathType::File(f) = self {
-            Some(f)
+            f
         } else {
-            None
+            panic!("unwrap_file called on path that is not a file");
         }
     }
 
@@ -85,11 +85,11 @@ impl PathType {
     /// # fn main() {
     /// let src = PathType::new("src").unwrap().unwrap_dir();
     /// # }
-    pub fn unwrap_dir(self) -> Option<PathDir> {
+    pub fn unwrap_dir(self) -> PathDir {
         if let PathType::Dir(d) = self {
-            Some(d)
+            d
         } else {
-            None
+            panic!("unwrap_dir called on path that is not a dir");
         }
     }
 
