@@ -133,10 +133,35 @@ impl PathDir {
     }
 
     /// List the contents of the directory, returning an iterator of `PathType`s.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use std::collections::HashSet;
+    /// use path_abs::{PathDir, PathFile, PathType};
+    ///
+    /// # fn main() {
+    ///
+    /// # let _ = ::std::fs::remove_dir_all("target/example");
+    ///
+    /// let example_dir = PathDir::create("target/example").unwrap();
+    /// let foo_dir = PathDir::create("target/example/foo").unwrap();
+    /// let bar_file = PathFile::create("target/example/bar.txt").unwrap();
+    ///
+    /// let mut result = HashSet::new();
+    /// for p in example_dir.list().unwrap() {
+    ///     result.insert(p.unwrap());
+    /// }
+    ///
+    /// let mut expected = HashSet::new();
+    /// expected.insert(PathType::Dir(foo_dir));
+    /// expected.insert(PathType::File(bar_file));
+    ///
+    /// assert_eq!(expected, result);
+    /// # }
     pub fn list(&self) -> io::Result<ListDir> {
         Ok(ListDir {fsread: fs::read_dir(self)?})
     }
-
 }
 
 /// An iterator over `PathType` objects, returned by `PathDir::list`.
@@ -208,5 +233,34 @@ impl<'de> Deserialize<'de> for PathDir {
     {
         let abs = PathAbs::deserialize(deserializer)?;
         PathDir::from_abs(abs).map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use tempdir::TempDir;
+    use std::collections::HashSet;
+    use super::super::{PathDir, PathFile, PathType};
+
+    #[test]
+    fn sanity_list() {
+        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_abs = PathDir::new(tmp_dir.path()).unwrap();
+
+        let foo_dir = PathDir::create(tmp_abs.join("foo")).unwrap();
+        let bar_file = PathFile::create(tmp_abs.join("bar.txt")).unwrap();
+
+        let mut result = HashSet::new();
+        for p in tmp_abs.list().unwrap() {
+            result.insert(p.unwrap());
+        }
+
+        let mut expected = HashSet::new();
+        expected.insert(PathType::Dir(foo_dir));
+        expected.insert(PathType::File(bar_file));
+
+        assert_eq!(expected, result);
+
     }
 }
