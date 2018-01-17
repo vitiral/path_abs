@@ -5,16 +5,24 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-//! Extensions to stdlib `Path` types, plus the `PathAbs` type.
+//! Absolute serializable path types and associated methods.
 //!
-//! [`PathAbs`](structs.PathAbs.html) adds a much needed type to the rust ecosystem:
-//! a path which is guaranteed to exist (at least on creation), is serializable, and has
-//! extension methods like `create[file/dir/dir_all]`, `read_*` and `write_*`.
+//! This library provides the following types:
+//! - [`PathAbs`](struct.PathAbs.html): an absolute (canonicalized) path that is guaranteed (when
+//!   created) to exist.
+//! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
+//!   associated methods.
+//! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
+//!   associated methods.
+//! - [`PathType`](struct.PathType.html): an enum containing either a file or a directory. Returned
+//!   by `PathDir::list`.
 //!
-//! In addition, `PathAbs` is serializable through serde (even on windows!) by using the crate
-//! [`stfu8`](https://crates.io/crates/stfu8) to encode/decode any ill-formed UTF-16.
+//! In addition, all types are serializable through serde (even on windows!) by using the crate
+//! [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed UTF-16.
 //! See that crate for more details on how the resulting encoding can be edited (by hand)
 //! even in the case of what *would be* ill-formed UTF-16.
+//!
+//! Also see the [project repo](https://github.com/vitiral/path_abs) and consider leaving a star!
 //!
 //! # Examples
 //! Recreating `Cargo.init` in `target/example`
@@ -83,9 +91,12 @@
 //! # }
 //! ```
 
+#[cfg(feature="serialize")]
 extern crate serde;
 #[macro_use]
+#[cfg(feature="serialize")]
 extern crate serde_derive;
+#[cfg(feature="serialize")]
 extern crate stfu8;
 
 #[macro_use]
@@ -104,6 +115,7 @@ use std::path::{Path, PathBuf};
 
 mod dir;
 mod file;
+#[cfg(feature="serialize")]
 mod ser;
 mod ty;
 
@@ -112,12 +124,7 @@ pub use file::PathFile;
 pub use ty::PathType;
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// An path which is guaranteed to:
-/// - Exist (on creation, the file may or may not be deleted later).
-/// - Be absolute (cannonicalized). On linux this means it will start with root (`/`) and
-///   have no symlinks.
-///
-/// > Implemented by calling [`Path::canonicalize()`][1] under the hood.
+/// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
 ///
 /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
 pub struct PathAbs(PathBuf);

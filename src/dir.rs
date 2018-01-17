@@ -12,12 +12,10 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-
 use super::{PathAbs, PathType};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// An absolute path to a directory that exists, with associated methods.
+/// A `PathAbs` that is guaranteed to be a directory, with associated methods.
 pub struct PathDir(pub(crate) PathAbs);
 
 impl PathDir {
@@ -235,25 +233,6 @@ impl Deref for PathDir {
 
     fn deref(&self) -> &PathAbs {
         &self.0
-    }
-}
-
-impl Serialize for PathDir {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for PathDir {
-    fn deserialize<D>(deserializer: D) -> Result<PathDir, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let abs = PathAbs::deserialize(deserializer)?;
-        PathDir::from_abs(abs).map_err(serde::de::Error::custom)
     }
 }
 

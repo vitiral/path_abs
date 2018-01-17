@@ -1,6 +1,6 @@
 [package]
 name = "path_abs"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Garrett Berg <googberg@gmail.com>"]
 description = "Absolute serializable path types and associated methods."
 keywords = [
@@ -14,10 +14,13 @@ documentation = "https://docs.rs/path_abs"
 repository = "https://github.com/vitiral/path_abs"
 
 [dependencies]
-serde = ">=1.0"
-serde_derive = "1.0.27"
-stfu8 = ">=0.2.1"
-walkdir = "2.0.1"
+serde = {version=">=1.0", optional=true}
+serde_derive = {version="1.0.27", optional=true}
+stfu8 = {version=">=0.2.1", optional=true}
+
+[features]
+default = ["serialize"]
+serialize = ["serde", "serde_derive", "stfu8"]
 
 [dev-dependencies]
 pretty_assertions = "0.4.1"

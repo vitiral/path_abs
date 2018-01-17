@@ -13,12 +13,10 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-
 use super::PathAbs;
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// An absolute path to a file that exists, with associated methods.
+/// a `PathAbs` that is guaranteed to be a file, with associated methods.
 pub struct PathFile(pub(crate) PathAbs);
 
 impl PathFile {
@@ -216,24 +214,5 @@ impl Deref for PathFile {
 
     fn deref(&self) -> &PathAbs {
         &self.0
-    }
-}
-
-impl Serialize for PathFile {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for PathFile {
-    fn deserialize<D>(deserializer: D) -> Result<PathFile, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let abs = PathAbs::deserialize(deserializer)?;
-        PathFile::from_abs(abs).map_err(serde::de::Error::custom)
     }
 }

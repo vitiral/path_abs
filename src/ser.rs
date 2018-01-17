@@ -16,7 +16,7 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 #[cfg(windows)]
 use std::ffi::OsString;
 
-use super::PathAbs;
+use super::{PathAbs, PathDir, PathFile};
 
 impl Serialize for PathAbs {
     #[cfg(unix)]
@@ -59,6 +59,44 @@ impl<'de> Deserialize<'de> for PathAbs {
         let p = String::deserialize(deserializer)?;
         let p = stfu8::decode_u16(&p).map_err(serde::de::Error::custom)?;
         PathAbs::new(OsString::from_wide(&p)).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for PathFile {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PathFile {
+    fn deserialize<D>(deserializer: D) -> Result<PathFile, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let abs = PathAbs::deserialize(deserializer)?;
+        PathFile::from_abs(abs).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for PathDir {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PathDir {
+    fn deserialize<D>(deserializer: D) -> Result<PathDir, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let abs = PathAbs::deserialize(deserializer)?;
+        PathDir::from_abs(abs).map_err(serde::de::Error::custom)
     }
 }
 

@@ -14,3 +14,7 @@ cache: cargo
 notifications:
   email:
     on_success: never
+
+script:
+  - cargo test --verbose --all
+  - cargo test --verbose --all --no-default-features
