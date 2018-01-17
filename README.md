@@ -1,4 +1,5 @@
 # path_abs: Absolute serializable path types and associated methods.
+[![Build Status](https://travis-ci.org/vitiral/path_abs.svg?branch=windows)](https://travis-ci.org/vitiral/path_abs)
 
 **See the [library docs](https://docs.rs/path_abs) for information on the
 types**
