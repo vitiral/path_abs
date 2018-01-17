@@ -27,10 +27,12 @@ use std::ops::Deref;
 use std::convert::AsRef;
 use std::path::{Path, PathBuf};
 
+mod dir;
 mod file;
 // mod ser;
 
 pub use file::PathFile;
+pub use dir::PathDir;
 
 // #[cfg(test)]
 // mod tests;
@@ -44,7 +46,9 @@ pub use file::PathFile;
 /// - Be absolute (cannonicalized). On linux this means it will start with root (`/`) and
 ///   have no symlinks.
 ///
-/// > Implemented by calling `Path::canonicalize()` under the hood.
+/// > Implemented by calling [`Path::canonicalize()`][1] under the hood.
+///
+/// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
 pub struct PathAbs(PathBuf);
 
 impl PathAbs {
@@ -63,78 +67,13 @@ impl PathAbs {
         Ok(PathAbs(path.as_ref().canonicalize()?))
     }
 
-
-    /// Instantiate a new `PathAbs` to a directory, creating it first if it doesn't exist.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
-    ///
-    /// # fn main() {
-    ///
-    /// let example = "target/example";
-    ///
-    /// # let _ = ::std::fs::remove_dir(example);
-    ///
-    /// let path = PathAbs::create_dir(example).unwrap();
-    ///
-    /// // It can be done twice with no effect.
-    /// let _ = PathAbs::create_dir(example).unwrap();
-    /// # }
-    /// ```
-    pub fn create_dir<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        if let Err(err) = fs::create_dir(&path) {
-            match err.kind() {
-                io::ErrorKind::AlreadyExists => {},
-                _ => return Err(err),
-            }
-        }
-        PathAbs::new(path)
+    pub fn to_file(self) -> io::Result<PathFile> {
+        PathFile::from_abs(self)
     }
 
-    /// Instantiate a new `PathAbs` to a directory, recursively recreating it and all of its parent
-    /// components if they are missing.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
-    ///
-    /// # fn main() {
-    ///
-    /// let example = "target/example/long/path";
-    ///
-    /// # let _ = ::std::fs::remove_dir_all("target/example");
-    ///
-    /// let path = PathAbs::create_dir_all(example).unwrap();
-    ///
-    /// // It can be done twice with no effect.
-    /// let _ = PathAbs::create_dir_all(example).unwrap();
-    /// # }
-    /// ```
-    pub fn create_dir_all<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        fs::create_dir_all(&path)?;
-        PathAbs::new(path)
+    pub fn to_dir(self) -> io::Result<PathDir> {
+        PathDir::from_abs(self)
     }
-
-    /// Join a path onto the `PathAbs`, expecting it to exist. Returns the resulting `PathAbs`.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
-    ///
-    /// # fn main() {
-    /// let src = PathAbs::new("src").unwrap();
-    /// let lib = src.join_abs("lib.rs").unwrap();
-    /// # }
-    /// ```
-    pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> io::Result<PathAbs> {
-        let joined = self.join(path.as_ref());
-        Ok(PathAbs::new(joined)?)
-    }
-
 
     /// For constructing mocked paths during tests. This is effectively the same as a `PathBuf`.
     ///
