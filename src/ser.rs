@@ -34,7 +34,7 @@ impl Serialize for PathAbs {
     where
         S: Serializer,
     {
-        let wide: Vec<u16> = self.as_os_str().encode_wide().iter().cloned().collect();
+        let wide: Vec<u16> = self.as_os_str().encode_wide().cloned().collect();
         let stfu = stfu8::encode_u16(&wide);
         serializer.serialize_str(&stfu)
     }
