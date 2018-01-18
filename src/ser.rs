@@ -149,8 +149,10 @@ mod tests {
             "{0}",
             tmp_abs.to_string_lossy().as_ref(),
         );
-        println!("### EXPECTED:\n{:#?}", expected_str);
+
+        println!("### EXPECTED:\n{}", expected_str);
         let result_str = serde_json::to_string(&expected).unwrap();
+        println!("### RESULT:\n{}", result_str);
         assert_eq!(expected_str, result_str);
 
         let result: Vec<PathType> = serde_json::from_str(&result_str).unwrap();
