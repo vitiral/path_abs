@@ -156,7 +156,7 @@ mod tests {
             PathType::Dir(foo_bar_dir),
         ];
 
-        let mut expected_str = SERIALIZED.replace(
+        let expected_str = SERIALIZED.replace(
                 "{0}",
                 &tmp_abs.to_stfu8(),
             )
