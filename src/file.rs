@@ -145,7 +145,8 @@ impl PathFile {
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())
+        f.write_all(s.as_bytes())?;
+        f.flush()
     }
 
     /// Append the `str` to a file, creating it if it doesn't exist.
@@ -174,7 +175,8 @@ impl PathFile {
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())
+        f.write_all(s.as_bytes())?;
+        f.flush()
     }
 
     /// Create a mock file type. *For use in tests only*.
