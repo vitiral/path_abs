@@ -23,53 +23,66 @@ use super::{PathAbs, PathDir, PathFile};
 macro_rules! map_err { ($s: expr, $res: expr) => {{
     match $res {
         Ok(v) => Ok(v),
-        Err(err) => Err(serde::de::Error::custom(&format!("{}: {}", $s, err))),
+        // FIXME: change degug->display
+        Err(err) => Err(serde::de::Error::custom(&format!("{}: {:?}", $s, err))),
     }
 }}}
 
-impl Serialize for PathAbs {
+#[derive(Debug)]
+// FIXME: flush out this error type
+pub enum DeserError {
+    Decode(stfu8::DecodeError),
+    Filesystem(::std::io::Error),
+}
+
+impl PathAbs {
     #[cfg(unix)]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    pub fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
-        let stfu = stfu8::encode_u8(bytes);
-        serializer.serialize_str(&stfu)
+        stfu8::encode_u8(bytes)
     }
 
     #[cfg(windows)]
+    pub fn to_stfu8(&self) -> String {
+        let wide: Vec<u16> = self.as_os_str().encode_wide().collect();
+        stfu8::encode_u16(&wide)
+    }
+
+    #[cfg(unix)]
+    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
+        let raw_path = stfu8::decode_u8(&s)
+            .map_err(|e| DeserError::Decode(e))?;
+        let os_str = OsStr::from_bytes(&raw_path);
+        PathAbs::new(os_str)
+            .map_err(|e| DeserError::Filesystem(e))
+    }
+
+    #[cfg(windows)]
+    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
+        let raw_path = stfu8::decode_u16(&s)
+            .map_err(|e| DeserError::Decode(e))?;
+        let os_str = OsString::from_wide(&raw_path);
+        PathAbs::new(os_str)
+            .map_err(|e| DeserError::Filesystem(e))
+    }
+}
+
+impl Serialize for PathAbs {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let wide: Vec<u16> = self.as_os_str().encode_wide().collect();
-        let stfu = stfu8::encode_u16(&wide);
-        serializer.serialize_str(&stfu)
+        serializer.serialize_str(&self.to_stfu8())
     }
 }
 
 impl<'de> Deserialize<'de> for PathAbs {
-    #[cfg(unix)]
     fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let raw_path = map_err!(s, stfu8::decode_u8(&s))?;
-        let os_str = OsStr::from_bytes(&raw_path);
-        map_err!(s, PathAbs::new(os_str))
-    }
-
-    #[cfg(windows)]
-    fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let raw_path = map_err!(s, stfu8::decode_u16(&s))?;
-        let os_str = OsString::from_wide(&raw_path);
-        map_err!(s, PathAbs::new(os_str))
+        map_err!(s, PathAbs::from_stfu8(&s))
     }
 }
 
@@ -149,7 +162,7 @@ mod tests {
 
         let expected_str = SERIALIZED.replace(
             "{0}",
-            tmp_abs.to_string_lossy().as_ref(),
+            &tmp_abs.to_stfu8(),
         );
 
         println!("### EXPECTED:\n{}", expected_str);
