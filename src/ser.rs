@@ -18,6 +18,13 @@ use std::ffi::OsString;
 
 use super::{PathAbs, PathDir, PathFile};
 
+macro_rules! map_err { ($s: expr, $res: expr) => {{
+    match $res {
+        Ok(v) => Ok(v),
+        Err(err) => Err(serde::de::Error::custom(&format!("{}: {}", $s, err))),
+    }
+}}}
+
 impl Serialize for PathAbs {
     #[cfg(unix)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -46,9 +53,10 @@ impl<'de> Deserialize<'de> for PathAbs {
     where
         D: Deserializer<'de>,
     {
-        let p = String::deserialize(deserializer)?;
-        let p = stfu8::decode_u8(&p).map_err(serde::de::Error::custom)?;
-        PathAbs::new(OsStr::from_bytes(&p)).map_err(serde::de::Error::custom)
+        let s = String::deserialize(deserializer)?;
+        let raw_path = map_err!(s, stfu8::decode_u8(&s))?;
+        let os_str = OsStr::from_bytes(&raw_path);
+        map_err!(s, PathAbs::new(os_str))
     }
 
     #[cfg(windows)]
@@ -56,9 +64,10 @@ impl<'de> Deserialize<'de> for PathAbs {
     where
         D: Deserializer<'de>,
     {
-        let p = String::deserialize(deserializer)?;
-        let p = stfu8::decode_u16(&p).map_err(serde::de::Error::custom)?;
-        PathAbs::new(OsString::from_wide(&p)).map_err(serde::de::Error::custom)
+        let s = String::deserialize(deserializer)?;
+        let raw_path = map_err!(s, stfu8::decode_u16(&s))?;
+        let os_str = OsString::from_wide(&raw_path);
+        map_err!(s, PathAbs::new(os_str))
     }
 }
 

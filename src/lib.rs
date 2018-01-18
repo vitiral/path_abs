@@ -91,12 +91,12 @@
 //! # }
 //! ```
 
-#[cfg(feature="serialize")]
+#[cfg(feature = "serialize")]
 extern crate serde;
 #[macro_use]
-#[cfg(feature="serialize")]
+#[cfg(feature = "serialize")]
 extern crate serde_derive;
-#[cfg(feature="serialize")]
+#[cfg(feature = "serialize")]
 extern crate stfu8;
 
 #[macro_use]
@@ -115,7 +115,7 @@ use std::path::{Path, PathBuf};
 
 mod dir;
 mod file;
-#[cfg(feature="serialize")]
+#[cfg(feature = "serialize")]
 mod ser;
 mod ty;
 

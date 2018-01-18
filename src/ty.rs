@@ -13,14 +13,8 @@ use super::PathAbs;
 use file::PathFile;
 use dir::PathDir;
 
-#[cfg_attr(
-    feature="serialize",
-    derive(Serialize, Deserialize)
-)]
-#[cfg_attr(
-    feature="serialize",
-    serde(tag = "type", content = "path", rename_all = "lowercase")
-)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serialize", serde(tag = "type", content = "path", rename_all = "lowercase"))]
 #[derive(Debug, Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An an enum containing either a file or a directory.
 ///
