@@ -50,20 +50,16 @@ impl PathAbs {
 
     #[cfg(unix)]
     pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u8(&s)
-            .map_err(|e| DeserError::Decode(e))?;
+        let raw_path = stfu8::decode_u8(&s).map_err(|e| DeserError::Decode(e))?;
         let os_str = OsStr::from_bytes(&raw_path);
-        PathAbs::new(os_str)
-            .map_err(|e| DeserError::Filesystem(e))
+        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
     }
 
     #[cfg(windows)]
     pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u16(&s)
-            .map_err(|e| DeserError::Decode(e))?;
+        let raw_path = stfu8::decode_u16(&s).map_err(|e| DeserError::Decode(e))?;
         let os_str = OsString::from_wide(&raw_path);
-        PathAbs::new(os_str)
-            .map_err(|e| DeserError::Filesystem(e))
+        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
     }
 }
 
@@ -130,17 +126,17 @@ mod tests {
 
     #[cfg(unix)]
     static SERIALIZED: &str = "[\
-    {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
-    {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
-    {\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}\
-    ]";
+                               {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}\
+                               ]";
 
     #[cfg(windows)]
     static SERIALIZED: &str = "[\
-    {\"type\":\"file\",\"path\":\"{0}\\\\foo.txt\"},\
-    {\"type\":\"dir\",\"path\":\"{0}\\\\bar\"},\
-    {\"type\":\"dir\",\"path\":\"{0}\\\\foo\\\\bar\"}\
-    ]";
+                               {\"type\":\"file\",\"path\":\"{0}\\\\foo.txt\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}\\\\bar\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}\\\\foo\\\\bar\"}\
+                               ]";
 
     #[test]
     fn sanity_serde() {
@@ -160,10 +156,13 @@ mod tests {
             PathType::Dir(foo_bar_dir),
         ];
 
-        let expected_str = SERIALIZED.replace(
-            "{0}",
-            &tmp_abs.to_stfu8(),
-        );
+        let mut expected_str = SERIALIZED.replace(
+                "{0}",
+                &tmp_abs.to_stfu8(),
+            )
+            // JSON needs backslashes escaped. Be careful not to invoke BA'AL:
+            // https://xkcd.com/1638/)
+            .replace(r"\", r"\\");
 
         println!("### EXPECTED:\n{}", expected_str);
         let result_str = serde_json::to_string(&expected).unwrap();
