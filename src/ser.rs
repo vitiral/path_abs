@@ -135,11 +135,11 @@ mod tests {
         use tempdir::TempDir;
 
         let tmp_dir = TempDir::new("example").expect("create temp dir");
-        let tmp_abs = PathDir::new(tmp_dir.path()).unwrap();
+        let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
-        let foo = PathFile::create(tmp_abs.join("foo.txt")).unwrap();
-        let bar_dir = PathDir::create(tmp_abs.join("bar")).unwrap();
-        let foo_bar_dir = PathDir::create_all(tmp_abs.join("foo/bar")).unwrap();
+        let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
+        let bar_dir = PathDir::create(tmp_abs.join("bar")).expect("bar");
+        let foo_bar_dir = PathDir::create_all(tmp_abs.join("foo").join("bar")).expect("foo/bar");
 
         let expected = vec![
             PathType::File(foo),
