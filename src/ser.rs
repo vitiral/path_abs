@@ -6,15 +6,17 @@
  * copied, modified, or distributed except according to those terms.
  */
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-use std::ffi::OsStr;
 use stfu8;
 
 #[cfg(unix)]
+use std::ffi::OsStr;
+#[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
-#[cfg(windows)]
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
 #[cfg(windows)]
 use std::ffi::OsString;
+#[cfg(windows)]
+use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use super::{PathAbs, PathDir, PathFile};
 
