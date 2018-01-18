@@ -16,5 +16,5 @@ notifications:
     on_success: never
 
 script:
-  - cargo test --verbose --all
-  - cargo test --verbose --all --no-default-features
+  - RUST_BACKTRACE=1 cargo test --verbose --all -- --nocapture
+  - RUST_BACKTRACE=1 cargo test --verbose --all --no-default-features -- --nocapture
