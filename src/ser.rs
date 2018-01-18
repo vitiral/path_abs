@@ -113,6 +113,20 @@ impl<'de> Deserialize<'de> for PathDir {
 mod tests {
     use super::super::{PathDir, PathFile, PathType};
 
+    #[cfg(unix)]
+    static SERIALIZED: &str = "[\
+    {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
+    {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
+    {\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}\
+    ]";
+
+    #[cfg(windows)]
+    static SERIALIZED: &str = "[\
+    {\"type\":\"file\",\"path\":\"{0}\\\\foo.txt\"},\
+    {\"type\":\"dir\",\"path\":\"{0}\\\\bar\"},\
+    {\"type\":\"dir\",\"path\":\"{0}\\\\foo\\\\bar\"}\
+    ]";
+
     #[test]
     fn sanity_serde() {
         use serde_json;
@@ -131,15 +145,11 @@ mod tests {
             PathType::Dir(foo_bar_dir),
         ];
 
-        let expected_str = format!(
-            "[\
-             {{\"type\":\"file\",\"path\":\"{0}/foo.txt\"}},\
-             {{\"type\":\"dir\",\"path\":\"{0}/bar\"}},\
-             {{\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}}\
-             ]",
-            tmp_abs.to_string_lossy().as_ref()
+        let expected_str = SERIALIZED.replace(
+            "{0}",
+            tmp_abs.to_string_lossy().as_ref(),
         );
-
+        println!("### EXPECTED:\n{:#?}", expected_str);
         let result_str = serde_json::to_string(&expected).unwrap();
         assert_eq!(expected_str, result_str);
 
