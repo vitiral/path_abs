@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 name = "path_abs"
 readme = "README.md"
 repository = "https://github.com/vitiral/path_abs"
-version = "0.2.2"
+version = "0.2.3"
 
 [dependencies.serde]
 optional = true
@@ -21,7 +21,7 @@ version = ">=1.0"
 
 [dependencies.serde_derive]
 optional = true
-version = "1.0.27"
+version = ">=1.0"
 
 [dependencies.stfu8]
 optional = true
