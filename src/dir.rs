@@ -5,6 +5,7 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+//! Paths to Directories and associated methods.
 use std::fs;
 use std::fmt;
 use std::io;
@@ -21,7 +22,7 @@ pub struct PathDir(pub(crate) PathAbs);
 impl PathDir {
     /// Instantiate a new `PathDir`. The directory must exist or `io::Error` will be returned.
     ///
-    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a dir.
+    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a directory.
     ///
     /// # Examples
     /// ```rust
@@ -42,7 +43,7 @@ impl PathDir {
     ///
     /// If the path is actually a file returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input
+    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
     /// > already a fully qualified path.
     ///
     /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
@@ -63,23 +64,23 @@ impl PathDir {
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "path is not a dir",
+                format!("{} is not a directory", abs.display()),
             ))
         }
     }
 
-    /// Instantiate a new `PathDir` to a directory, creating it first if it doesn't exist.
+    /// Instantiate a new `PathDir` to a directory, creating the directory if it doesn't exist.
     ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
-    /// let example = "target/example";
-    ///
-    /// # let _ = ::std::fs::remove_dir_all(example);
+    /// let example = "example";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let dir = PathDir::create(example).unwrap();
     ///
@@ -91,7 +92,12 @@ impl PathDir {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => return Err(err),
+                _ => {
+                    return Err(io::Error::new(
+                        err.kind(),
+                        format!("{} when creating {}", err, path.as_ref().display()),
+                    ))
+                }
             }
         }
         PathDir::new(path)
@@ -103,13 +109,13 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
-    /// let example = "target/example/long/path";
-    ///
-    /// # let _ = ::std::fs::remove_dir_all("target/example");
+    /// let example = "example/long/path";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let path = PathDir::create_all(example).unwrap();
     ///
@@ -118,7 +124,12 @@ impl PathDir {
     /// # }
     /// ```
     pub fn create_all<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
-        fs::create_dir_all(&path)?;
+        fs::create_dir_all(&path).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when creating-all {}", err, path.as_ref().display()),
+            )
+        })?;
         PathDir::new(path)
     }
 
@@ -149,16 +160,18 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use std::collections::HashSet;
     /// use path_abs::{PathDir, PathFile, PathType};
     ///
     /// # fn main() {
+    /// let example = "example";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join("example");
     ///
-    /// # let _ = ::std::fs::remove_dir_all("target/example");
-    ///
-    /// let example_dir = PathDir::create("target/example").unwrap();
-    /// let foo_dir = PathDir::create("target/example/foo").unwrap();
-    /// let bar_file = PathFile::create("target/example/bar.txt").unwrap();
+    /// let example_dir = PathDir::create(example).unwrap();
+    /// let foo_dir = PathDir::create(example_dir.join("foo")).unwrap();
+    /// let bar_file = PathFile::create(example_dir.join("bar.txt")).unwrap();
     ///
     /// let mut result = HashSet::new();
     /// for p in example_dir.list().unwrap() {
@@ -172,8 +185,79 @@ impl PathDir {
     /// assert_eq!(expected, result);
     /// # }
     pub fn list(&self) -> io::Result<ListDir> {
+        let fsread = fs::read_dir(self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when reading dir {}", err, self.display()),
+            )
+        })?;
         Ok(ListDir {
-            fsread: fs::read_dir(self)?,
+            dir: self.clone(),
+            fsread: fsread,
+        })
+    }
+
+    /// Remove (delete) the _empty_ directory from the filesystem, consuming self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::path::Path;
+    /// use path_abs::PathDir;
+    ///
+    /// # fn main() {
+    /// let example = Path::new("example/long/path");
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    ///
+    /// let dir = PathDir::create_all(example).unwrap();
+    /// let parent = dir.parent_dir().unwrap();
+    ///
+    /// assert!(example.exists());
+    /// dir.remove().unwrap();
+    /// // assert!(dir.exists());  <--- COMPILE ERROR
+    /// assert!(!example.exists());
+    /// parent.remove().unwrap();
+    /// # }
+    /// ```
+    pub fn remove(self) -> io::Result<()> {
+        fs::remove_dir(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing {}", err, self.display()),
+            )
+        })
+    }
+
+    /// Remove (delete) the directory, after recursively removing its contents. Use carefully!
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::path::Path;
+    /// use path_abs::PathDir;
+    ///
+    /// # fn main() {
+    /// let example = Path::new("example/long/path");
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    ///
+    /// let dir = PathDir::create_all(example).unwrap();
+    /// let parent = dir.parent_dir().unwrap();
+    ///
+    /// assert!(example.exists());
+    /// parent.remove_all().unwrap();
+    /// assert!(!example.exists());
+    /// # }
+    /// ```
+    pub fn remove_all(self) -> io::Result<()> {
+        fs::remove_dir_all(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing all {}", err, self.display()),
+            )
         })
     }
 
@@ -187,6 +271,9 @@ impl PathDir {
 
 /// An iterator over `PathType` objects, returned by `PathDir::list`.
 pub struct ListDir {
+    // TODO: this should be a reference...?
+    // Or is this a good excuse to use Arc under the hood everywhere?
+    dir: PathDir,
     fsread: fs::ReadDir,
 }
 
@@ -196,7 +283,12 @@ impl ::std::iter::Iterator for ListDir {
         let entry = match self.fsread.next() {
             Some(r) => match r {
                 Ok(e) => e,
-                Err(err) => return Some(Err(err)),
+                Err(err) => {
+                    return Some(Err(io::Error::new(
+                        err.kind(),
+                        format!("{} when iterating over {}", err, self.dir.display()),
+                    )))
+                }
             },
             None => return None,
         };

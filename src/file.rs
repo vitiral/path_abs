@@ -13,10 +13,10 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::PathAbs;
+use super::{FileEdit, FileRead, FileWrite, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// a `PathAbs` that is guaranteed to be a file, with associated methods.
+/// a `PathAbs` that was a file at the time of initialization, with associated methods.
 pub struct PathFile(pub(crate) PathAbs);
 
 impl PathFile {
@@ -43,7 +43,7 @@ impl PathFile {
     ///
     /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input
+    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
     /// > already a fully qualified path.
     ///
     /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
@@ -64,23 +64,26 @@ impl PathFile {
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "path is not a file",
+                format!("{} is not a file", abs.display()),
             ))
         }
     }
 
-    /// Instantiate a new `PathFile`, creating it first if it doesn't exist.
+    /// Instantiate a new `PathFile`, creating an empty file if it doesn't exist.
     ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
-    /// let example = "target/example.txt";
-    ///
-    /// # let _ = ::std::fs::remove_file(example);
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let file = PathFile::create(example).unwrap();
     ///
@@ -89,7 +92,16 @@ impl PathFile {
     /// # }
     /// ```
     pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathFile> {
-        fs::OpenOptions::new().write(true).create(true).open(&path)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&path)
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when opening {}", err, path.as_ref().display()),
+                )
+            })?;
         PathFile::new(path)
     }
 
@@ -98,12 +110,13 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -112,23 +125,27 @@ impl PathFile {
     /// # }
     /// ```
     pub fn read_string(&self) -> io::Result<String> {
-        let mut f = fs::OpenOptions::new().read(true).open(self)?;
-        let mut out = String::with_capacity(f.metadata()?.len() as usize);
+        let mut f = self.read()?;
+        let mut out = {
+            let meta = f.metadata()?;
+            String::with_capacity(meta.len() as usize)
+        };
         f.read_to_string(&mut out)?;
         Ok(out)
     }
 
-    /// Write the `str` to a file, truncating it first if it exist and creating it otherwise.
+    /// Write the `str` to a file, truncating it first if it exists and creating it otherwise.
     ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -137,11 +154,10 @@ impl PathFile {
     /// # }
     /// ```
     pub fn write_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(self)?;
+        let mut options = fs::OpenOptions::new();
+        options.create(true);
+        options.truncate(true);
+        let mut f = FileWrite::open_path(self.clone(), options)?;
         if s.is_empty() {
             return Ok(());
         }
@@ -151,17 +167,16 @@ impl PathFile {
 
     /// Append the `str` to a file, creating it if it doesn't exist.
     ///
-    /// If the `str` is empty, this is equivalent to the unix `touch`
-    /// except it does NOT update the timestamp
-    ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar\nbaz";
@@ -171,12 +186,131 @@ impl PathFile {
     /// # }
     /// ```
     pub fn append_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new().append(true).create(true).open(self)?;
+        let mut f = self.append()?;
         if s.is_empty() {
             return Ok(());
         }
         f.write_all(s.as_bytes())?;
         f.flush()
+    }
+
+    /// Open the file as read-only.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::io::Read;
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar";
+    /// file.write_str(expected).unwrap();
+    ///
+    /// let mut read = file.read().unwrap();
+    /// let mut s = String::new();
+    /// read.read_to_string(&mut s).unwrap();
+    /// assert_eq!(expected, s);
+    /// # }
+    /// ```
+    pub fn read(&self) -> io::Result<FileRead> {
+        FileRead::read_path(self.clone())
+    }
+
+    /// Open the file as write-only in append mode.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::io::Write;
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar\n";
+    /// file.write_str("foo\n").unwrap();
+    ///
+    /// let mut append = file.append().unwrap();
+    /// append.write_all(b"bar\n").unwrap();
+    /// append.flush();
+    /// assert_eq!(expected, file.read_string().unwrap());
+    /// # }
+    /// ```
+    pub fn append(&self) -> io::Result<FileWrite> {
+        let mut options = fs::OpenOptions::new();
+        options.append(true);
+        FileWrite::open_path(self.clone(), options)
+    }
+
+    /// Open the file for editing (reading and writing).
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::io::{Read, Seek, Write, SeekFrom};
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar";
+    ///
+    /// let mut edit = file.edit().unwrap();
+    /// let mut s = String::new();
+    ///
+    /// edit.write_all(expected.as_bytes()).unwrap();
+    /// edit.seek(SeekFrom::Start(0)).unwrap();
+    /// edit.read_to_string(&mut s).unwrap();
+    /// assert_eq!(expected, s);
+    /// # }
+    /// ```
+    pub fn edit(&self) -> io::Result<FileEdit> {
+        FileEdit::open_path(self.clone(), fs::OpenOptions::new())
+    }
+
+    /// Remove (delete) the file from the filesystem, consuming self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use path_abs::PathFile;
+    /// use std::path::Path;
+    ///
+    /// # fn main() {
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    /// let file = PathFile::create(example).unwrap();
+    /// assert!(file.exists());
+    /// file.remove().unwrap();
+    ///
+    /// // file.exists() <--- COMPILER ERROR, `file` was consumed
+    ///
+    /// assert!(!Path::new(example).exists());
+    /// # }
+    /// ```
+    pub fn remove(self) -> io::Result<()> {
+        fs::remove_file(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing {}", err, self.display()),
+            )
+        })
     }
 
     /// Create a mock file type. *For use in tests only*.

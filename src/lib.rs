@@ -5,38 +5,135 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-//! Absolute serializable path types and associated methods.
+//! Ergonomic paths and files in rust.
 //!
-//! This library provides the following types:
-//! - [`PathAbs`](struct.PathAbs.html): an absolute (canonicalized) path that is guaranteed (when
-//!   created) to exist.
+//! This library aims to provide ergonomic path and file operations to rust with
+//! reasonable performance.
+//!
+//! This includes:
+//!
+//! - Improved error messages, see the **Better Errors** section.
+//! - Improved type safety. The types specify that a file _once_ existed and was _once_ a certain
+//!   type. Obviously a file/directory can be deleted/changed by another process.
+//! - More stringent mutability requirements. See the **Differing Method Signatures** section.
+//! - Cheap cloning: all path types are `Arc`, which a cheap operation compared to filesystem
+//!   operations and allows more flexibility and ergonomics in the library for relatively low cost.
+//!
+//! Also see the [project repo](https://github.com/vitiral/path_abs) for more information about the
+//! motivation for this crate. Consider leaving a star!
+//!
+//!
+//! ## Better Errors
+//!
+//! All errors include the **path** and **action** which caused the error, as well as the unaltered
+//! `std::io::Error` message. Errors are `std::io::Error`, giving almost complete compatibility
+//! with existing code.
+//!
+//! ### `set_len` (i.e. truncate a file):
+//!
+//! - [`/* */ std::fs::File::set_len(0)`][file_set_len]: `Invalid argument (os error 22)`
+//! - [`path_abs::FileWrite::set_len(0)`][path_set_len]: `Invalid argument (os error 22) when setting
+//!   len for /path/to/example/foo.txt`
+//!
+//! > The above error is actually impossible because `FileWrite` is always writeable, and
+//! > `FileRead` does not implement `set_len`. However, it is kept for demonstration.
+//!
+//! ### `read` (open file for reading):
+//!
+//! - [`/**/ std::fs::File::read(path)`][file_read]: `No such file or directory (os error 2)`
+//! - [`path_abs::FileRead::read(path)`][path_read]: `No such file or directory (os error 2) when
+//!   opening example/foo.txt`
+//!
+//! And every other method has similarily improved errors. If a method does not have pretty error
+//! messages please open a ticket.
+//!
+//! [file_set_len]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
+//! [file_read]: https://doc.rust-lang.org/std/fs/struct.File.html#method.read
+//! [path_set_len]: struct.FileWrite.html#method.set_len
+//! [path_read]: struct.FileRead.html#method.read
+//!
+//!
+//! ## Exported Path Types
+//!
+//! These are the exported Path types. All of them are absolute except for `PathArc`, which
+//! is just an `Arc<PathBuf>` with methods that have better error reporting.
+//!
+//! - [`PathArc`](struct.PathArc.html): a reference counted `PathBuf` with methods reimplemented
+//!   with better error messages. Use this for a generic serializable path that may or may
+//!   not exist.
+//! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (canonicalized) path that is
+//!   guaranteed (on initialization) to exist.
 //! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
 //!   associated methods.
 //! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
 //!   associated methods.
-//! - [`PathType`](struct.PathType.html): an enum containing either a file or a directory. Returned
-//!   by `PathDir::list`.
+//! - [`PathType`](struct.PathType.html): an enum containing either a PathFile or a PathDir.
+//!   Returned by [`PathDir::list`][dir_list]
 //!
-//! In addition, all types are serializable through serde (even on windows!) by using the crate
-//! [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed UTF-16.
-//! See that crate for more details on how the resulting encoding can be edited (by hand)
-//! even in the case of what *would be* ill-formed UTF-16.
+//! In addition, all paths are serializable through serde (even on windows!) by using the crate
+//! [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed UTF-16. See
+//! that crate for more details on how the resulting encoding can be edited (by hand) even in the
+//! case of what *would be* ill-formed UTF-16.
 //!
-//! Also see the [project repo](https://github.com/vitiral/path_abs) and consider leaving a star!
+//! [dir_list]: struct.PathDir.html#method.list)
+//!
+//!
+//! ## Exported File Types
+//!
+//! All File types provide _type safe_ access to their relevant traits. For instance, you can't
+//! `read` with a `FileWrite` and you can't `write` with a `FileRead`.
+//!
+//! - [`FileRead`](struct.FileRead.html): a read-only file handle with `path()` attached and
+//!   improved error messages. Contains only the methods and trait implementations which are
+//!   allowed by a read-only file.
+//! - [`FileWrite`](struct.FileWrite.html): a write-only file handle with `path()` attached and
+//!   improved error messages. Contains only the methods and trait implementations which are
+//!   allowed by a write-only file.
+//! - [`FileEdit`](struct.FileEdit.html): a read/write file handle with `path()` attached and
+//!   improved error messages. Contains methods and trait implements for both readable _and_
+//!   writeable files.
+//!
+//! ### Differing Method Signatures
+//!
+//! The type signatures of the `File*` types regarding `read`, `write` and other methods is
+//! slightly different than `std::fs::File` -- they all take `&mut` instead of `&`. This is to
+//! avoid a [common possible footgun](https://github.com/rust-lang/rust/issues/47708).
+//!
+//! To demonstrate, imagine the following scenario:
+//!
+//! - You pass your open `&File` to a method, which puts it in a thread. This thread constantly
+//!   calls `seek(SeekFrom::Start(10))`
+//! - You periodically read from a file expecting new data, but are always getting the same data.
+//!
+//! Yes, this is actually allowed by the rust compiler since `seek` is implemented for
+//! [`&File`](https://doc.rust-lang.org/std/fs/struct.File.html#impl-Seek-1). Technically this is
+//! still _memory safe_ since the operating system will handle any contention, however many would
+//! argue that it isn't _expected_ that an immutable reference passed to another
+//! function can affect the seek position of a file.
+//!
 //!
 //! # Examples
-//! Recreating `Cargo.init` in `target/example`
+//! Recreating `Cargo.init` in `example/`
 //!
 //! ```rust
 //! # extern crate path_abs;
+//! # extern crate tempdir;
+//! use std::path::Path;
 //! use std::collections::HashSet;
-//! use path_abs::{PathAbs, PathDir, PathFile, PathType};
+//! use path_abs::{
+//!     PathAbs,   // absolute path that exists
+//!     PathDir,   // absolute path to a directory
+//!     PathFile,  // absolute path to a file
+//!     PathType,  // enum of Dir or File
+//!     FileRead,  // Open read-only file handler
+//!     FileWrite, // Open write-only file handler
+//!     FileEdit,  // Open read/write file handler
+//! };
 //!
 //! # fn main() {
-//!
-//! let example = "target/example";
-//!
-//! # let _ = ::std::fs::remove_dir_all(example);
+//! let example = Path::new("example");
+//! # let tmp = tempdir::TempDir::new("ex").unwrap();
+//! # let example = &tmp.path().join(example);
 //!
 //! // Create your paths
 //! let project = PathDir::create_all(example).unwrap();
@@ -58,36 +155,54 @@
 //! [package]
 //! name = "example"
 //! version = "0.1.0"
-//! authors = ["Garrett Berg <googberg@gmail.com>"]
+//! authors = ["Garrett Berg <vitiral@gmail.com>"]
 //!
 //! [dependencies]
 //! "#).unwrap();
 //!
+//! // Put our result into a HashMap so we can assert it
 //! let mut result = HashSet::new();
 //! for p in project.list().unwrap() {
 //!     result.insert(p.unwrap());
 //! }
 //!
+//! // Create our expected value
 //! let mut expected = HashSet::new();
 //! expected.insert(PathType::Dir(src));
 //! expected.insert(PathType::File(cargo));
 //!
 //! assert_eq!(expected, result);
 //!
-//! // Get a file
-//! let abs = PathAbs::new("target/example/src/lib.rs").unwrap();
+//! // ----------------------------------
+//! // Creating types from existing paths
 //!
-//! // or get the file of known type
-//! let file = PathType::new("target/example/src/lib.rs")
+//! // Creating a generic path
+//! let lib_path = example.join("src").join("lib.rs");
+//! let abs = PathAbs::new(&lib_path).unwrap();
+//!
+//! // Or a path with a known type
+//! let file = PathType::new(&lib_path)
 //!     .unwrap()
 //!     .unwrap_file();
 //!
-//! // or use `into_file`
+//! // Or use `PathAbs::into_file`
 //! let file2 = abs.clone().into_file().unwrap();
 //!
 //! assert!(abs.is_file());
 //! assert!(file.is_file());
 //! assert!(file2.is_file());
+//!
+//! // ----------------------------------
+//! // Opening a File
+//!
+//! // open read-only using the PathFile method
+//! let read = file.read().unwrap();
+//!
+//! // Or use the type directly: open for appending
+//! let write = FileWrite::append(&file).unwrap();
+//!
+//! // Open for read/write editing.
+//! let edit = file.edit().unwrap();
 //! # }
 //! ```
 
@@ -103,135 +218,78 @@ extern crate stfu8;
 #[cfg(test)]
 extern crate pretty_assertions;
 #[cfg(test)]
+extern crate regex;
+#[cfg(test)]
 extern crate serde_json;
 #[cfg(test)]
 extern crate tempdir;
 
-use std::convert::AsRef;
-use std::io;
-use std::fmt;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-
+mod abs;
+mod arc;
 mod dir;
+mod edit;
 mod file;
+pub mod open;
 #[cfg(feature = "serialize")]
 mod ser;
 mod ty;
+mod write;
+mod read;
 
-pub use dir::PathDir;
+pub use abs::PathAbs;
+pub use arc::PathArc;
+pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
 pub use ty::PathType;
 
-#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
-///
-/// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-pub struct PathAbs(PathBuf);
+pub use edit::FileEdit;
+pub use write::FileWrite;
+pub use read::FileRead;
 
-impl PathAbs {
-    /// Instantiate a new `PathAbs`. The path must exist or `io::Error` will be returned.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
-    ///
-    /// # fn main() {
-    /// let lib = PathAbs::new("src/lib.rs").unwrap();
-    /// # }
-    /// ```
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        Ok(PathAbs(path.as_ref().canonicalize()?))
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use tempdir::TempDir;
+    use regex::{self, Regex};
+
+    use super::*;
+
+    macro_rules! assert_match { ($re: expr, $err: expr) => {{
+        let re = Regex::new(&$re).unwrap();
+        let err = $err.to_string();
+        assert!(
+            re.is_match(&err), "\nGot Err         : {:?}\nMatching against: {:?}",
+            err.to_string(),
+            $re
+        );
+    }}}
+
+    fn escape<P: AsRef<Path>>(path: P) -> String {
+        regex::escape(&format!("{}", path.as_ref().display()))
     }
 
-    /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
-    pub fn into_file(self) -> io::Result<PathFile> {
-        PathFile::from_abs(self)
-    }
+    #[test]
+    /// Tests to make sure the error messages look like we expect.
+    fn sanity_errors() {
+        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
-    /// Resolve the `PathAbs` as a `PathDir`. Return an error if it is not a directory.
-    pub fn into_dir(self) -> io::Result<PathDir> {
-        PathDir::from_abs(self)
-    }
-
-    /// Get the parent directory of this path as a `PathDir`.
-    ///
-    /// > This does not make additinal syscalls, as the parent by definition must be a directory
-    /// > and exist.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::{PathDir, PathFile};
-    ///
-    /// # fn main() {
-    /// let lib = PathFile::new("src/lib.rs").unwrap();
-    /// let src = lib.parent_dir().unwrap();
-    /// assert_eq!(PathDir::new("src").unwrap(), src);
-    /// # }
-    /// ```
-    pub fn parent_dir(&self) -> Option<PathDir> {
-        match self.parent() {
-            Some(p) => Some(PathDir(PathAbs(p.to_path_buf()))),
-            None => None,
+        {
+            let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
+            foo.clone().remove().unwrap();
+            let pat = if cfg!(unix) {
+                format!(
+                    r"No such file or directory \(os error \d+\) when opening {}",
+                    escape(&foo)
+                )
+            } else {
+                format!(
+                    r"The system cannot find the file specified. \(os error \d+\) when opening {}",
+                    escape(&foo)
+                )
+            };
+            assert_match!(pat, foo.edit().unwrap_err())
         }
-    }
-
-    /// For constructing mocked paths during tests. This is effectively the same as a `PathBuf`.
-    ///
-    /// This is NOT checked for validity so the file may or may not actually exist and will
-    /// NOT be, in any way, an absolute or canonicalized path.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
-    ///
-    /// # fn main() {
-    /// // this file exist
-    /// let lib = PathAbs::new("src/lib.rs").unwrap();
-    ///
-    /// let lib_mocked = PathAbs::mock("src/lib.rs");
-    ///
-    /// // in this case, the mocked file exists
-    /// assert!(lib_mocked.exists());
-    ///
-    /// // However, it is NOT equivalent to `lib`
-    /// assert_ne!(lib, lib_mocked);
-    ///
-    /// // this file doesn't exist at all
-    /// let dne = PathAbs::mock("src/dne.rs");
-    /// assert!(!dne.exists());
-    /// # }
-    /// ```
-    pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
-        PathAbs(fake_path.as_ref().to_path_buf())
-    }
-}
-
-impl fmt::Debug for PathAbs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl AsRef<PathBuf> for PathAbs {
-    fn as_ref(&self) -> &PathBuf {
-        &self.0
-    }
-}
-
-impl AsRef<Path> for PathAbs {
-    fn as_ref(&self) -> &Path {
-        self.0.as_path()
-    }
-}
-
-impl Deref for PathAbs {
-    type Target = PathBuf;
-
-    fn deref(&self) -> &PathBuf {
-        &self.0
     }
 }
