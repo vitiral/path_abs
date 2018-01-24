@@ -1,0 +1,67 @@
+/* Copyright (c) 2018 Garrett Berg, vitiral@gmail.com
+ *
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
+ */
+//! Open file paths that are read-only.
+
+use std::convert::AsRef;
+use std::fs;
+use std::fmt;
+use std::io;
+use std::path::Path;
+use std::ops::Deref;
+
+use super::PathFile;
+use super::open::PathOpen;
+
+/// An open file read only file. Get the associated `PathFile` with with the `path()`
+/// method.
+///
+/// > This type is not serializable.
+pub struct PathRead(pub(crate) PathOpen);
+
+impl PathRead {
+    /// Open the file with the given `OpenOptions` but always sets `write` to true.
+    pub fn read<P: AsRef<Path>>(path: P) -> io::Result<PathRead> {
+        let mut options = fs::OpenOptions::new();
+        options.read(true);
+        Ok(PathRead(PathOpen::open(path, options)?))
+    }
+
+    /// Shortcut to open the file if the path is already canonicalized.
+    pub fn read_file(path_file: PathFile) -> io::Result<PathRead> {
+        let mut options = fs::OpenOptions::new();
+        options.read(true);
+        Ok(PathRead(PathOpen::open_file(path_file, options)?))
+    }
+}
+
+impl fmt::Debug for PathRead {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ReadOnly(")?;
+        self.path.fmt(f)?;
+        write!(f, ")")
+    }
+}
+
+impl io::Read for PathRead {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.0.file.read(buf).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when reading {}", err, self.path().display()),
+            )
+        })
+    }
+}
+
+impl Deref for PathRead {
+    type Target = PathOpen;
+
+    fn deref(&self) -> &PathOpen {
+        &self.0
+    }
+}

@@ -15,13 +15,9 @@ use std::convert::AsRef;
 
 use super::PathFile;
 
-/// A `PathOpen` with an open file handle attached to it.
+/// > **INTERNAL TYPE: do not use directly.**
 ///
-/// Unlike other types in this crate, this type defines `AsRef<File>` and
-/// `Deref<File>`, meaning it _looks_ like an open file. You have to use
-/// the `path()` method to get access to the associated `PathFile` struct.
-///
-/// > This type is not serializable.
+/// Use `PathWrite` and `PathRead` instead.
 pub struct PathOpen {
     pub(crate) path: PathFile,
     pub(crate) file: fs::File,
@@ -46,7 +42,7 @@ impl PathOpen {
 
     /// Shortcut to open the file if the path is already canonicalized.
     ///
-    /// Typically you should use `File::open` instead (i.e. `file.open(options)` or
+    /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).
     pub fn open_file(path_file: PathFile, options: fs::OpenOptions) -> io::Result<PathOpen> {
         let file = options.open(&path_file).map_err(|err| {
@@ -62,85 +58,9 @@ impl PathOpen {
         })
     }
 
-    /// Attempts to open a file in read-only mode.
-    pub fn read<P: AsRef<Path>>(path: P) -> io::Result<PathOpen> {
-        let mut options = fs::OpenOptions::new();
-        options.read(true);
-        PathOpen::open(path, options)
-    }
-
-    /// Open the file in write-only mode, truncating it first if it exists and creating it
-    /// otherwise.
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathOpen> {
-        let mut options = fs::OpenOptions::new();
-        options.write(true);
-        options.truncate(true);
-        options.create(true);
-        PathOpen::open(path, options)
-    }
-
-    /// Open the file for appending, creating it if it doesn't exist.
-    pub fn append<P: AsRef<Path>>(path: P) -> io::Result<PathOpen> {
-        let mut options = fs::OpenOptions::new();
-        options.append(true);
-        options.create(true);
-        PathOpen::open(path, options)
-    }
-
     /// Get the path associated with the open file.
     pub fn path(&self) -> &PathFile {
         &self.path
-    }
-
-    /// Attempts to sync all OS-internal metadata to disk.
-    ///
-    /// This function will attempt to ensure that all in-core data reaches the filesystem before
-    /// returning.
-    ///
-    /// This function is identical to [std::fs::File::sync_all][0] except it has error
-    /// messages which include the action and the path.
-    ///
-    /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_all
-    pub fn sync_all(&self) -> io::Result<()> {
-        self.file.sync_all().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when syncing {}", err, self.path.display()),
-            )
-        })
-    }
-
-    /// This function is similar to sync_all, except that it may not synchronize file metadata to
-    /// the filesystem.
-    ///
-    /// This function is identical to [std::fs::File::sync_data][0] except it has error
-    /// messages which include the action and the path.
-    ///
-    /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_data
-    pub fn sync_data(&self) -> io::Result<()> {
-        self.file.sync_data().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when syncing data for {}", err, self.path.display()),
-            )
-        })
-    }
-
-    /// Truncates or extends the underlying file, updating the size of this file to become size.
-    ///
-    /// This function is identical to [std::fs::File::set_len][0] except:
-    ///
-    /// - It has error messages which include the action and the path.
-    /// - It takes `&mut self` instead of `&self`.
-    ///
-    /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
-    pub fn set_len(&mut self, size: u64) -> io::Result<()> {
-        self.file.set_len(size).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when setting len for {}", err, self.path.display()),
-            )
-        })
     }
 
     /// Queries metadata about the underlying file.
@@ -176,27 +96,6 @@ impl PathOpen {
             path: self.path.clone(),
         })
     }
-
-    /// Changes the permissions on the underlying file.
-    ///
-    /// This function is identical to [std::fs::File::set_permissions][0] except:
-    ///
-    /// - It has error messages which include the action and the path.
-    /// - It takes `&mut self` instead of `&self`.
-    ///
-    /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_permissions
-    pub fn set_permissions(&mut self, perm: fs::Permissions) -> io::Result<()> {
-        self.file.set_permissions(perm).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!(
-                    "{} when setting permisions for {}",
-                    err,
-                    self.path.display()
-                ),
-            )
-        })
-    }
 }
 
 impl fmt::Debug for PathOpen {
@@ -213,32 +112,12 @@ impl Into<fs::File> for PathOpen {
     }
 }
 
-impl io::Write for PathOpen {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.file.write(buf).map_err(|err| {
+impl io::Seek for PathOpen {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.file.seek(pos).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when writing to {}", err, self.path().display()),
-            )
-        })
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.file.flush().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when flushing {}", err, self.path().display()),
-            )
-        })
-    }
-}
-
-impl io::Read for PathOpen {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.file.read(buf).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when reading {}", err, self.path().display()),
+                format!("{} seeking {}", err, self.path().display()),
             )
         })
     }

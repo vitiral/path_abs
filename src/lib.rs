@@ -10,22 +10,24 @@
 //! ## Better Errors
 //!
 //! `set_len`:
-//! - [`std::fs::File::set_len(0)     `][file_set_len]: `Invalid argument (os error 22)`
+//!
+//! - [`/**/ std::fs::File::set_len(0)`][file_set_len]: `Invalid argument (os error 22)`
 //! - [`path_abs::PathOpen::set_len(0)`][path_set_len]: `Invalid argument (os error 22) when setting
 //!   len for /path/to/example/foo.txt`
 //!
 //! `read` (open file for reading):
-//! - [`std::fs::File::read(path)     `][file_read]: `No such file or directory (os error 2)`
+//!
+//! - [`/**/ std::fs::File::read(path)`][file_read]: `No such file or directory (os error 2)`
 //! - [`path_abs::PathOpen::read(path)`][path_read]: `No such file or directory (os error 2) when
 //!   opening example/foo.txt`
 //!
-//! And every other method. If a method does not have pretty error messages please open a ticket.
+//! And every other method has similarily improved errors. If a method does not have pretty error
+//! messages please open a ticket.
 //!
 //! ## Exported Types
 //!
-//! This library provides the following types:
 //! - [`PathArc`](struct.PathArc.html): a reference counted `PathBuf` with methods reimplemented
-//!   with better error messages. Use this for a "generic serialized path".
+//!   with better error messages. Use this for a "generic serializable path".
 //! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (canonicalized) path that is
 //!   guaranteed (when created) to exist.
 //! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
@@ -33,7 +35,7 @@
 //! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
 //!   associated methods.
 //! - [`PathType`](struct.PathType.html): an enum containing either a file or a directory. Returned
-//!   by `PathDir::list`.
+//!   by [`PathDir::list`][dir_list]
 //! - [`PathOpen`](struct.PathOpen.html): an open file with the `path()` attached and error
 //!   messages which include the path information.
 //!
@@ -51,6 +53,7 @@
 //! [file_read]: https://doc.rust-lang.org/std/fs/struct.File.html#method.read
 //! [path_set_len]: struct.PathOpen.html#method.set_len)
 //! [path_read]: struct.PathOpen.html#method.read)
+//! [dir_list]: struct.PathDir.html#method.list)
 //!
 //! # Examples
 //! Recreating `Cargo.init` in `target/example`
@@ -141,21 +144,23 @@ mod abs;
 mod arc;
 mod dir;
 mod file;
-mod open;
+pub mod open;
 #[cfg(feature = "serialize")]
 mod ser;
 mod ty;
+mod write;
+mod read;
 
 pub use abs::PathAbs;
 pub use arc::PathArc;
 pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
-pub use open::PathOpen;
 pub use ty::PathType;
+pub use write::PathWrite;
+pub use read::PathRead;
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
     use std::path::Path;
 
     use tempdir::TempDir;
@@ -185,21 +190,6 @@ mod tests {
 
         {
             let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
-            let mut open = foo.read().unwrap();
-            assert_match!(
-                format!(
-                    r"Bad file descriptor \(os error \d+\) when writing to {}",
-                    escape(&foo)
-                ),
-                open.write_all(b"can't write").unwrap_err()
-            );
-            assert_match!(
-                format!(
-                    r"Invalid argument \(os error \d+\) when setting len for {}",
-                    escape(&foo)
-                ),
-                open.set_len(0).unwrap_err()
-            );
             foo.clone().remove().unwrap();
             assert_match!(
                 format!(
