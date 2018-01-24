@@ -224,6 +224,8 @@ impl PathArc {
     /// Returns the canonical form of the path with all intermediate components normalized and
     /// symbolic links resolved.
     ///
+    /// > This is identical to `PathAbs::new(path)`.
+    ///
     /// This function is identical to [std::path::Path::canonicalize][0] except:
     /// - It returns a `PathAbs` object
     /// - It has error messages which include the action and the path

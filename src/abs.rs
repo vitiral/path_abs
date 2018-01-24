@@ -34,14 +34,8 @@ impl PathAbs {
     /// # }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        let can = path.as_ref().canonicalize().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when cannonicalizing {}", err, path.as_ref().display()),
-            )
-        })?;
-
-        Ok(PathAbs(PathArc::from(can)))
+        let arc = PathArc::new(path);
+        arc.canonicalize()
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
@@ -56,7 +50,7 @@ impl PathAbs {
 
     /// Get the parent directory of this path as a `PathDir`.
     ///
-    /// > This does not make additinal syscalls, as the parent by definition must be a directory
+    /// > This does not make aditional syscalls, as the parent by definition must be a directory
     /// > and exist.
     ///
     /// # Examples

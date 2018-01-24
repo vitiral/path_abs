@@ -121,29 +121,11 @@ impl PathFile {
     /// # }
     /// ```
     pub fn read_string(&self) -> io::Result<String> {
-        let mut f = fs::OpenOptions::new()
-            .read(true)
-            .open(self)
-            .map_err(|err| {
-                io::Error::new(
-                    err.kind(),
-                    format!("{} when opening {}", err, self.display()),
-                )
-            })?;
-        let meta = f.metadata().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when getting metadata for {}", err, self.display()),
-            )
-        })?;
+        let mut f = self.read()?;
+        let meta = f.metadata()?;
 
         let mut out = String::with_capacity(meta.len() as usize);
-        f.read_to_string(&mut out).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when reading {}", err, self.display()),
-            )
-        })?;
+        f.read_to_string(&mut out)?;
         Ok(out)
     }
 
@@ -166,26 +148,15 @@ impl PathFile {
     /// # }
     /// ```
     pub fn write_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(self)
-            .map_err(|err| {
-                io::Error::new(
-                    err.kind(),
-                    format!("{} when opening {}", err, self.display()),
-                )
-            })?;
+        let mut options = fs::OpenOptions::new();
+        options.write(true);
+        options.create(true);
+        options.truncate(true);
+        let mut f = PathOpen::open_file(self.clone(), options)?;
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes()).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when writing to {}", err, self.display()),
-            )
-        })?;
+        f.write_all(s.as_bytes())?;
         f.flush()
     }
 
@@ -211,25 +182,11 @@ impl PathFile {
     /// # }
     /// ```
     pub fn append_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(self)
-            .map_err(|err| {
-                io::Error::new(
-                    err.kind(),
-                    format!("{} when opening {}", err, self.display()),
-                )
-            })?;
+        let mut f = self.append()?;
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes()).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when appending to {}", err, self.display()),
-            )
-        })?;
+        f.write_all(s.as_bytes())?;
         f.flush()
     }
 
