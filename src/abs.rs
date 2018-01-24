@@ -125,3 +125,9 @@ impl Deref for PathAbs {
         &self.0
     }
 }
+
+impl Into<PathArc> for PathAbs {
+    fn into(self) -> PathArc {
+        self.0
+    }
+}

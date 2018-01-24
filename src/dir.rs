@@ -195,6 +195,26 @@ impl PathDir {
         })
     }
 
+    /// Remove (delete) the _empty_ directory from the filesystem, consuming self.
+    pub fn remove(self) -> io::Result<()> {
+        fs::remove_dir(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing {}", err, self.display()),
+            )
+        })
+    }
+
+    /// Remove (delete) the directory, after recursively removing its contents. Use carefully!
+    pub fn remove_all(self) -> io::Result<()> {
+        fs::remove_dir_all(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing all {}", err, self.display()),
+            )
+        })
+    }
+
     /// Create a mock dir type. *For use in tests only*.
     ///
     /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)

@@ -202,6 +202,16 @@ impl PathFile {
         PathOpen::open_file(self.clone(), options)
     }
 
+    /// Remove (delete) the file from the filesystem, consuming self.
+    pub fn remove(self) -> io::Result<()> {
+        fs::remove_file(&self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when removing {}", err, self.display()),
+            )
+        })
+    }
+
     /// Open the file as writeable. Note that this does NOT truncate the file
     /// OR create it if it doesn't exist.
     pub fn edit(&self) -> io::Result<PathOpen> {
