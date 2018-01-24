@@ -18,24 +18,13 @@ use std::ffi::OsString;
 #[cfg(windows)]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-use super::{PathAbs, PathDir, PathFile};
+use super::{PathArc, PathAbs, PathDir, PathFile};
 
-macro_rules! map_err { ($s: expr, $res: expr) => {{
-    match $res {
-        Ok(v) => Ok(v),
-        // FIXME: change degug->display
-        Err(err) => Err(serde::de::Error::custom(&format!("{}: {:?}", $s, err))),
-    }
+macro_rules! map_err { ($res: expr) => {{
+    $res.map_err(|err| serde::de::Error::custom(&err.to_string()))
 }}}
 
-#[derive(Debug)]
-// FIXME: flush out this error type
-pub enum DeserError {
-    Decode(stfu8::DecodeError),
-    Filesystem(::std::io::Error),
-}
-
-impl PathAbs {
+impl PathArc {
     #[cfg(unix)]
     pub fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
@@ -49,17 +38,37 @@ impl PathAbs {
     }
 
     #[cfg(unix)]
-    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u8(&s).map_err(|e| DeserError::Decode(e))?;
+    pub fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        let raw_path = stfu8::decode_u8(&s)?;
         let os_str = OsStr::from_bytes(&raw_path);
-        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
+        Ok(PathArc::new(os_str))
     }
 
     #[cfg(windows)]
-    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u16(&s).map_err(|e| DeserError::Decode(e))?;
+    pub fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        let raw_path = stfu8::decode_u16(&s)?;
         let os_str = OsString::from_wide(&raw_path);
-        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
+        Ok(PathArc::new(os_str))
+    }
+}
+
+impl Serialize for PathArc {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for PathArc {
+    fn deserialize<D>(deserializer: D) -> Result<PathArc, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+
+        map_err!(PathArc::from_stfu8(&s))
     }
 }
 
@@ -68,7 +77,7 @@ impl Serialize for PathAbs {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.to_stfu8())
+        self.0.serialize(serializer)
     }
 }
 
@@ -78,7 +87,8 @@ impl<'de> Deserialize<'de> for PathAbs {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        map_err!(s, PathAbs::from_stfu8(&s))
+        let arc = map_err!(PathArc::from_stfu8(&s))?;
+        map_err!(PathAbs::from_arc(arc))
     }
 }
 

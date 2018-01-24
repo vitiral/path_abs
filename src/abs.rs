@@ -34,8 +34,11 @@ impl PathAbs {
     /// # }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        let arc = PathArc::new(path);
-        arc.canonicalize()
+        PathAbs::from_arc(PathArc::new(path))
+    }
+
+    pub fn from_arc(path: PathArc) -> io::Result<PathAbs> {
+        path.canonicalize()
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
