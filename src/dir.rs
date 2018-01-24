@@ -5,6 +5,7 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+//! Paths to Directories and associated methods.
 use std::fs;
 use std::fmt;
 use std::io;
@@ -188,7 +189,10 @@ impl PathDir {
                 format!("{} when reading dir {}", err, self.display()),
             )
         })?;
-        Ok(ListDir { fsread: fsread })
+        Ok(ListDir {
+            dir: self.clone(),
+            fsread: fsread,
+        })
     }
 
     /// Create a mock dir type. *For use in tests only*.
@@ -203,7 +207,7 @@ impl PathDir {
 pub struct ListDir {
     // TODO: this should be a reference...?
     // Or is this a good excuse to use Arc under the hood everywhere?
-    // dir: PathDir,
+    dir: PathDir,
     fsread: fs::ReadDir,
 }
 
@@ -213,8 +217,12 @@ impl ::std::iter::Iterator for ListDir {
         let entry = match self.fsread.next() {
             Some(r) => match r {
                 Ok(e) => e,
-                // FIXME: this error can be improved if we have self.dir
-                Err(err) => return Some(Err(err)),
+                Err(err) => {
+                    return Some(Err(io::Error::new(
+                        err.kind(),
+                        format!("{} when iterating over {}", err, self.dir.display()),
+                    )))
+                }
             },
             None => return None,
         };

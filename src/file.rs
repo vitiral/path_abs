@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::PathAbs;
+use super::{PathAbs, PathOpen};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that is guaranteed to be a file, with associated methods.
@@ -147,7 +147,7 @@ impl PathFile {
         Ok(out)
     }
 
-    /// Write the `str` to a file, truncating it first if it exist and creating it otherwise.
+    /// Write the `str` to a file, truncating it first if it exists and creating it otherwise.
     ///
     /// # Examples
     /// ```rust
@@ -231,6 +231,33 @@ impl PathFile {
             )
         })?;
         f.flush()
+    }
+
+    /// Open the file with the specified options.
+    pub fn open(&self, options: fs::OpenOptions) -> io::Result<PathOpen> {
+        PathOpen::open_file(self.clone(), options)
+    }
+
+    /// Open the file as read-only.
+    pub fn read(&self) -> io::Result<PathOpen> {
+        let mut options = fs::OpenOptions::new();
+        options.read(true);
+        PathOpen::open_file(self.clone(), options)
+    }
+
+    /// Open the file as writeable. Note that this does NOT truncate the file
+    /// OR create it if it doesn't exist.
+    pub fn edit(&self) -> io::Result<PathOpen> {
+        let mut options = fs::OpenOptions::new();
+        options.write(true);
+        PathOpen::open_file(self.clone(), options)
+    }
+
+    /// Open the file in append mode.
+    pub fn append(&self) -> io::Result<PathOpen> {
+        let mut options = fs::OpenOptions::new();
+        options.append(true);
+        PathOpen::open_file(self.clone(), options)
     }
 
     /// Create a mock file type. *For use in tests only*.

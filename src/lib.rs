@@ -8,8 +8,8 @@
 //! Absolute serializable path types and associated methods.
 //!
 //! This library provides the following types:
-//! - [`PathAbs`](struct.PathAbs.html): an absolute (canonicalized) path that is guaranteed (when
-//!   created) to exist.
+//! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (canonicalized) path that is
+//!   guaranteed (when created) to exist.
 //! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
 //!   associated methods.
 //! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
@@ -23,6 +23,9 @@
 //! even in the case of what *would be* ill-formed UTF-16.
 //!
 //! Also see the [project repo](https://github.com/vitiral/path_abs) and consider leaving a star!
+//!
+//! > All types are internally `Arc<PathBuf>` so they are extremely cheap to clone. When working
+//! > with paths a reference count is NOT an expensive operation for you!
 //!
 //! # Examples
 //! Recreating `Cargo.init` in `target/example`
@@ -112,22 +115,25 @@ use std::io;
 use std::fmt;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 mod dir;
 mod file;
+mod open;
 #[cfg(feature = "serialize")]
 mod ser;
 mod ty;
 
 pub use dir::PathDir;
 pub use file::PathFile;
+pub use open::PathOpen;
 pub use ty::PathType;
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
 ///
 /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-pub struct PathAbs(PathBuf);
+pub struct PathAbs(Arc<PathBuf>);
 
 impl PathAbs {
     /// Instantiate a new `PathAbs`. The path must exist or `io::Error` will be returned.
@@ -149,7 +155,7 @@ impl PathAbs {
             )
         })?;
 
-        Ok(PathAbs(can))
+        Ok(PathAbs(Arc::new(can)))
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
@@ -180,7 +186,7 @@ impl PathAbs {
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
-            Some(p) => Some(PathDir(PathAbs(p.to_path_buf()))),
+            Some(p) => Some(PathDir(PathAbs(Arc::new(p.to_path_buf())))),
             None => None,
         }
     }
@@ -213,7 +219,7 @@ impl PathAbs {
     /// # }
     /// ```
     pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
-        PathAbs(fake_path.as_ref().to_path_buf())
+        PathAbs(Arc::new(fake_path.as_ref().to_path_buf()))
     }
 }
 
