@@ -146,7 +146,7 @@ impl PathArc {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// use path_abs::PathArc;
     ///
     /// # fn main() {
     /// let path = PathArc::new("some/path");

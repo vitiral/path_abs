@@ -73,7 +73,7 @@ impl PathAbs {
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
-            Some(p) => Some(PathDir(PathAbs(Arc::new(p.to_path_buf())))),
+            Some(p) => Some(PathDir(PathAbs(PathArc::new(p)))),
             None => None,
         }
     }
@@ -106,7 +106,7 @@ impl PathAbs {
     /// # }
     /// ```
     pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
-        PathAbs(Arc::new(fake_path.as_ref().to_path_buf()))
+        PathAbs(PathArc::new(fake_path))
     }
 }
 
@@ -118,7 +118,7 @@ impl fmt::Debug for PathAbs {
 
 impl AsRef<PathArc> for PathAbs {
     fn as_ref(&self) -> &PathArc {
-        self.0
+        &self.0
     }
 }
 
