@@ -11,7 +11,6 @@ use std::fmt;
 use std::ops::Deref;
 use std::io;
 use std::convert::AsRef;
-use std::sync::Arc;
 use std::path::{Path};
 
 use super::{PathArc, PathFile, PathDir};
@@ -20,7 +19,7 @@ use super::{PathArc, PathFile, PathDir};
 /// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
 ///
 /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-pub struct PathAbs(PathArc);
+pub struct PathAbs(pub(crate) PathArc);
 
 impl PathAbs {
     /// Instantiate a new `PathAbs`. The path must exist or `io::Error` will be returned.
@@ -42,7 +41,7 @@ impl PathAbs {
             )
         })?;
 
-        Ok(PathAbs(PathArc::from_buf(can)))
+        Ok(PathAbs(PathArc::from(can)))
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
