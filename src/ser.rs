@@ -18,7 +18,7 @@ use std::ffi::OsString;
 #[cfg(windows)]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-use super::{PathArc, PathAbs, PathDir, PathFile};
+use super::{PathAbs, PathArc, PathDir, PathFile};
 
 macro_rules! map_err { ($res: expr) => {{
     $res.map_err(|err| serde::de::Error::custom(&err.to_string()))

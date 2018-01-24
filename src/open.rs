@@ -189,12 +189,15 @@ impl PathOpen {
         self.file.set_permissions(perm).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when setting permisions for {}", err, self.path.display()),
+                format!(
+                    "{} when setting permisions for {}",
+                    err,
+                    self.path.display()
+                ),
             )
         })
     }
 }
-
 
 impl fmt::Debug for PathOpen {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -11,9 +11,9 @@ use std::fmt;
 use std::ops::Deref;
 use std::io;
 use std::convert::AsRef;
-use std::path::{Path};
+use std::path::Path;
 
-use super::{PathArc, PathFile, PathDir};
+use super::{PathArc, PathDir, PathFile};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
