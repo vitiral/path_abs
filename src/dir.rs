@@ -63,7 +63,7 @@ impl PathDir {
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "path is not a dir",
+                format!("{} is not a directory", abs.display()),
             ))
         }
     }
@@ -91,7 +91,12 @@ impl PathDir {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => return Err(err),
+                _ => {
+                    return Err(io::Error::new(
+                        err.kind(),
+                        format!("{} when creating {}", err, path.as_ref().display()),
+                    ))
+                }
             }
         }
         PathDir::new(path)
@@ -118,7 +123,12 @@ impl PathDir {
     /// # }
     /// ```
     pub fn create_all<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
-        fs::create_dir_all(&path)?;
+        fs::create_dir_all(&path).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when creating-all {}", err, path.as_ref().display()),
+            )
+        })?;
         PathDir::new(path)
     }
 
@@ -172,9 +182,13 @@ impl PathDir {
     /// assert_eq!(expected, result);
     /// # }
     pub fn list(&self) -> io::Result<ListDir> {
-        Ok(ListDir {
-            fsread: fs::read_dir(self)?,
-        })
+        let fsread = fs::read_dir(self).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when reading dir {}", err, self.display()),
+            )
+        })?;
+        Ok(ListDir { fsread: fsread })
     }
 
     /// Create a mock dir type. *For use in tests only*.
@@ -187,6 +201,9 @@ impl PathDir {
 
 /// An iterator over `PathType` objects, returned by `PathDir::list`.
 pub struct ListDir {
+    // TODO: this should be a reference...?
+    // Or is this a good excuse to use Arc under the hood everywhere?
+    // dir: PathDir,
     fsread: fs::ReadDir,
 }
 
@@ -196,6 +213,7 @@ impl ::std::iter::Iterator for ListDir {
         let entry = match self.fsread.next() {
             Some(r) => match r {
                 Ok(e) => e,
+                // FIXME: this error can be improved if we have self.dir
                 Err(err) => return Some(Err(err)),
             },
             None => return None,

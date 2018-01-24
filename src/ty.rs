@@ -44,8 +44,15 @@ impl PathType {
     /// let src = PathType::new("src").unwrap();
     /// # }
     pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathType> {
-        let abs = PathAbs::new(path)?;
-        let ty = abs.metadata()?.file_type();
+        let abs = PathAbs::new(&path)?;
+        let ty = abs.metadata()
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when getting metadata for {}", err, abs.display()),
+                )
+            })?
+            .file_type();
         if ty.is_file() {
             Ok(PathType::File(PathFile(abs)))
         } else if ty.is_dir() {
@@ -53,7 +60,7 @@ impl PathType {
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "path is not a dir or a file",
+                format!("{} is not a dir or a file", path.as_ref().display()),
             ))
         }
     }
@@ -69,10 +76,11 @@ impl PathType {
     /// let lib = PathType::new("src/lib.rs").unwrap().unwrap_file();
     /// # }
     pub fn unwrap_file(self) -> PathFile {
-        if let PathType::File(f) = self {
-            f
-        } else {
-            panic!("unwrap_file called on path that is not a file");
+        match self {
+            PathType::File(f) => f,
+            PathType::Dir(d) => {
+                panic!("unwrap_file called on {}, which is not a file", d.display())
+            }
         }
     }
 
@@ -87,10 +95,12 @@ impl PathType {
     /// let src = PathType::new("src").unwrap().unwrap_dir();
     /// # }
     pub fn unwrap_dir(self) -> PathDir {
-        if let PathType::Dir(d) = self {
-            d
-        } else {
-            panic!("unwrap_dir called on path that is not a dir");
+        match self {
+            PathType::Dir(d) => d,
+            PathType::File(f) => panic!(
+                "unwrap_dir called on {}, which is not a directory",
+                f.display()
+            ),
         }
     }
 

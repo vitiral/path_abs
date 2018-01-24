@@ -142,7 +142,14 @@ impl PathAbs {
     /// # }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
-        Ok(PathAbs(path.as_ref().canonicalize()?))
+        let can = path.as_ref().canonicalize().map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when cannonicalizing {}", err, path.as_ref().display()),
+            )
+        })?;
+
+        Ok(PathAbs(can))
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.

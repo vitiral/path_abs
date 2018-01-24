@@ -64,7 +64,7 @@ impl PathFile {
         } else {
             Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "path is not a file",
+                format!("{} is not a file", abs.display()),
             ))
         }
     }
@@ -89,7 +89,16 @@ impl PathFile {
     /// # }
     /// ```
     pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathFile> {
-        fs::OpenOptions::new().write(true).create(true).open(&path)?;
+        fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&path)
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when opening {}", err, path.as_ref().display()),
+                )
+            })?;
         PathFile::new(path)
     }
 
@@ -112,9 +121,29 @@ impl PathFile {
     /// # }
     /// ```
     pub fn read_string(&self) -> io::Result<String> {
-        let mut f = fs::OpenOptions::new().read(true).open(self)?;
-        let mut out = String::with_capacity(f.metadata()?.len() as usize);
-        f.read_to_string(&mut out)?;
+        let mut f = fs::OpenOptions::new()
+            .read(true)
+            .open(self)
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when opening {}", err, self.display()),
+                )
+            })?;
+        let meta = f.metadata().map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when getting metadata for {}", err, self.display()),
+            )
+        })?;
+
+        let mut out = String::with_capacity(meta.len() as usize);
+        f.read_to_string(&mut out).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when reading {}", err, self.display()),
+            )
+        })?;
         Ok(out)
     }
 
@@ -141,11 +170,22 @@ impl PathFile {
             .write(true)
             .create(true)
             .truncate(true)
-            .open(self)?;
+            .open(self)
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when opening {}", err, self.display()),
+                )
+            })?;
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())?;
+        f.write_all(s.as_bytes()).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when writing to {}", err, self.display()),
+            )
+        })?;
         f.flush()
     }
 
@@ -171,11 +211,25 @@ impl PathFile {
     /// # }
     /// ```
     pub fn append_str(&self, s: &str) -> io::Result<()> {
-        let mut f = fs::OpenOptions::new().append(true).create(true).open(self)?;
+        let mut f = fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(self)
+            .map_err(|err| {
+                io::Error::new(
+                    err.kind(),
+                    format!("{} when opening {}", err, self.display()),
+                )
+            })?;
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())?;
+        f.write_all(s.as_bytes()).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when appending to {}", err, self.display()),
+            )
+        })?;
         f.flush()
     }
 
