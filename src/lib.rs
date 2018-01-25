@@ -36,8 +36,10 @@
 //!   associated methods.
 //! - [`PathType`](struct.PathType.html): an enum containing either a file or a directory. Returned
 //!   by [`PathDir::list`][dir_list]
-//! - [`PathOpen`](struct.PathOpen.html): an open file with the `path()` attached and error
+//! - [`FileRead`](struct.FileRead.html): an open read-only file with the `path()` attached and error
 //!   messages which include the path information.
+//! - [`FileWrite`](struct.FileRead.html): an open write-only or appending file with the `path()`
+//!   attached and error messages which include the path information.
 //!
 //! In addition, all types (expect `PathOpen`) are serializable through serde (even on windows!) by
 //! using the crate [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed
@@ -143,6 +145,7 @@ extern crate tempdir;
 mod abs;
 mod arc;
 mod dir;
+mod edit;
 mod file;
 pub mod open;
 #[cfg(feature = "serialize")]
@@ -156,8 +159,10 @@ pub use arc::PathArc;
 pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
 pub use ty::PathType;
-pub use write::PathWrite;
-pub use read::PathRead;
+
+pub use edit::FileEdit;
+pub use write::FileWrite;
+pub use read::FileRead;
 
 #[cfg(test)]
 mod tests {

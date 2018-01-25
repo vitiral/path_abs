@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::{PathAbs, PathRead, PathWrite};
+use super::{PathAbs, FileEdit, FileRead, FileWrite};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that is guaranteed to be a file, with associated methods.
@@ -152,7 +152,7 @@ impl PathFile {
         let mut options = fs::OpenOptions::new();
         options.create(true);
         options.truncate(true);
-        let mut f = PathWrite::open_file(self.clone(), options)?;
+        let mut f = FileWrite::open_path(self.clone(), options)?;
         if s.is_empty() {
             return Ok(());
         }
@@ -191,23 +191,21 @@ impl PathFile {
     }
 
     /// Open the file as read-only.
-    pub fn read(&self) -> io::Result<PathRead> {
-        PathRead::read_file(self.clone())
+    pub fn read(&self) -> io::Result<FileRead> {
+        FileRead::read_path(self.clone())
     }
 
     /// Open the file for editing (reading and writing) but do not create it
     /// if it doesn't exist.
-    pub fn edit(&self) -> io::Result<PathWrite> {
-        let mut options = fs::OpenOptions::new();
-        options.read(true);
-        PathWrite::open_file(self.clone(), options)
+    pub fn edit(&self) -> io::Result<FileEdit> {
+        FileEdit::open_path(self.clone(), fs::OpenOptions::new())
     }
 
     /// Open the file in append mode.
-    pub fn append(&self) -> io::Result<PathWrite> {
+    pub fn append(&self) -> io::Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
-        PathWrite::open_file(self.clone(), options)
+        FileWrite::open_path(self.clone(), options)
     }
 
     /// Remove (delete) the file from the filesystem, consuming self.

@@ -21,33 +21,33 @@ use super::open::PathOpen;
 /// method.
 ///
 /// > This type is not serializable.
-pub struct PathRead(pub(crate) PathOpen);
+pub struct FileRead(pub(crate) PathOpen);
 
-impl PathRead {
+impl FileRead {
     /// Open the file with the given `OpenOptions` but always sets `write` to true.
-    pub fn read<P: AsRef<Path>>(path: P) -> io::Result<PathRead> {
+    pub fn read<P: AsRef<Path>>(path: P) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(PathRead(PathOpen::open(path, options)?))
+        Ok(FileRead(PathOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
-    pub fn read_file(path_file: PathFile) -> io::Result<PathRead> {
+    pub(crate) fn read_path(path: PathFile) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(PathRead(PathOpen::open_file(path_file, options)?))
+        Ok(FileRead(PathOpen::open_file(path, options)?))
     }
 }
 
-impl fmt::Debug for PathRead {
+impl fmt::Debug for FileRead {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ReadOnly(")?;
+        write!(f, "FileRead(")?;
         self.path.fmt(f)?;
         write!(f, ")")
     }
 }
 
-impl io::Read for PathRead {
+impl io::Read for FileRead {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.0.file.read(buf).map_err(|err| {
             io::Error::new(
@@ -58,7 +58,7 @@ impl io::Read for PathRead {
     }
 }
 
-impl Deref for PathRead {
+impl Deref for FileRead {
     type Target = PathOpen;
 
     fn deref(&self) -> &PathOpen {

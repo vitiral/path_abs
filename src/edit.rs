@@ -5,7 +5,7 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-//! Open write-only file paths and associated methods.
+//! Open editable (read+write) file paths and associated methods.
 
 use std::convert::AsRef;
 use std::fs;
@@ -21,44 +21,46 @@ use super::open::PathOpen;
 /// method.
 ///
 /// > This type is not serializable.
-pub struct FileWrite(pub(crate) PathOpen);
+pub struct FileEdit(pub(crate) PathOpen);
 
-impl FileWrite {
+impl FileEdit {
     /// Open the file with the given `OpenOptions` but always sets `write` to true.
-    pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
+    pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> io::Result<FileEdit> {
         options.write(true);
-        Ok(FileWrite(PathOpen::open(path, options)?))
+        options.read(true);
+        Ok(FileEdit(PathOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
-    pub(crate) fn open_path(path_file: PathFile, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
+    pub(crate) fn open_path(path: PathFile, mut options: fs::OpenOptions) -> io::Result<FileEdit> {
         options.write(true);
-        Ok(FileWrite(PathOpen::open_file(path_file, options)?))
+        options.read(true);
+        Ok(FileEdit(PathOpen::open_file(path, options)?))
     }
 
-    /// Open the file in write-only mode, truncating it first if it exists and creating it
+    /// Open the file in editing mode, truncating it first if it exists and creating it
     /// otherwise.
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<FileEdit> {
         let mut options = fs::OpenOptions::new();
         options.truncate(true);
         options.create(true);
-        FileWrite::open(path, options)
+        FileEdit::open(path, options)
     }
 
     /// Open the file for appending, creating it if it doesn't exist.
-    pub fn append<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn append<P: AsRef<Path>>(path: P) -> io::Result<FileEdit> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
         options.create(true);
-        FileWrite::open(path, options)
+        FileEdit::open(path, options)
     }
 
     /// Open the file for editing (reading and writing) but do not create it
     /// if it doesn't exist.
-    pub fn edit<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn edit<P: AsRef<Path>>(path: P) -> io::Result<FileEdit> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        FileWrite::open(path, options)
+        FileEdit::open(path, options)
     }
 
     /// Attempts to sync all OS-internal metadata to disk.
@@ -134,15 +136,27 @@ impl FileWrite {
     }
 }
 
-impl fmt::Debug for FileWrite {
+impl fmt::Debug for FileEdit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FileWrite(")?;
+        write!(f, "FileEdit(")?;
         self.path.fmt(f)?;
         write!(f, ")")
     }
 }
 
-impl io::Write for FileWrite {
+impl io::Read for FileEdit {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.0.file.read(buf).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} when reading {}", err, self.path().display()),
+            )
+        })
+    }
+}
+
+
+impl io::Write for FileEdit {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.file.write(buf).map_err(|err| {
             io::Error::new(
@@ -162,7 +176,7 @@ impl io::Write for FileWrite {
     }
 }
 
-impl Deref for FileWrite {
+impl Deref for FileEdit {
     type Target = PathOpen;
 
     fn deref(&self) -> &PathOpen {
