@@ -74,13 +74,17 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
-    /// # let _ = ::std::fs::remove_file(example);
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let file = PathFile::create(example).unwrap();
     ///
@@ -107,12 +111,14 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -135,12 +141,14 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -168,11 +176,13 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar\nbaz";
@@ -195,13 +205,15 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use std::io::Read;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -222,13 +234,15 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use std::io::Write;
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar\n";
@@ -251,13 +265,15 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use std::io::{Read, Seek, Write, SeekFrom};
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     ///
     /// let expected = "foo\nbar";
@@ -280,19 +296,20 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathFile;
     /// use std::path::Path;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example.txt";
-    /// # let _ = ::std::fs::remove_file(example);
+    /// let example = "example.txt";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example).unwrap();
     /// assert!(file.exists());
     /// file.remove().unwrap();
     ///
-    /// // Note: file was consumed.
-    /// // file.exists() <--- COMPILER ERROR
+    /// // file.exists() <--- COMPILER ERROR, `file` was consumed
     ///
     /// assert!(!Path::new(example).exists());
     /// # }
