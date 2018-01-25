@@ -7,8 +7,8 @@
  */
 //! Ergonomic paths and files in rust.
 //!
-//! This library aims to provide ergonomic path and file operations to rust with
-//! reasonable performance.
+//! This library aims to provide ergonomic path and file operations to rust with reasonable
+//! performance.
 //!
 //! This includes:
 //!
@@ -18,10 +18,6 @@
 //! - More stringent mutability requirements. See the **Differing Method Signatures** section.
 //! - Cheap cloning: all path types are `Arc`, which a cheap operation compared to filesystem
 //!   operations and allows more flexibility and ergonomics in the library for relatively low cost.
-//!
-//! Also see the [project repo](https://github.com/vitiral/path_abs) for more information about the
-//! motivation for this crate. Consider leaving a star!
-//!
 //!
 //! ## Better Errors
 //!
