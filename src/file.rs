@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::{FileEdit, FileRead, FileWrite, PathAbs};
+use super::{FileEdit, FileRead, FileWrite, PathAbs, PathArc};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -354,7 +354,47 @@ impl Deref for PathFile {
 }
 
 impl Into<PathAbs> for PathFile {
+    /// Downgrades the `PathFile` into a `PathAbs`
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use std::path::PathBuf;
+    /// use path_abs::{PathFile, PathAbs};
+    ///
+    /// # fn main() {
+    /// let file = PathFile::new("src/lib.rs").unwrap();
+    /// let abs: PathAbs = file.clone().into();
+    /// # }
+    /// ```
     fn into(self) -> PathAbs {
         self.0
+    }
+}
+
+impl Into<PathArc> for PathFile {
+    /// Downgrades the `PathFile` into a `PathArc`
+    fn into(self) -> PathArc {
+        (self.0).0
+    }
+}
+
+impl Into<PathBuf> for PathFile {
+    /// Downgrades the `PathFile` into a `PathBuf`. Avoids a clone if this is the only reference.
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use path_abs::PathFile;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn main() {
+    /// let file = PathFile::new("src/lib.rs").unwrap();
+    /// let buf: PathBuf = file.into();
+    /// # }
+    /// ```
+    fn into(self) -> PathBuf {
+        let arc: PathArc = self.into();
+        arc.into()
     }
 }

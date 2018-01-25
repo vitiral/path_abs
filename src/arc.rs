@@ -194,3 +194,29 @@ impl From<PathBuf> for PathArc {
         PathArc(Arc::new(path))
     }
 }
+
+impl Into<PathBuf> for PathArc {
+    /// If there is only one reference to the `PathArc`, returns
+    /// the inner `PathBuf`. Otherwise clones the inner `PathBuf`.
+    ///
+    /// This is useful when you really want a `PathBuf`, especially
+    /// when the `PathArc` was only recently created.
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use path_abs::PathArc;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn main() {
+    /// let base = PathArc::new("base");
+    /// let foo: PathBuf = base.join("foo.txt").into();
+    /// }
+    /// ```
+    fn into(self) -> PathBuf {
+        match Arc::try_unwrap(self.0) {
+            Ok(p) => p,
+            Err(inner) => inner.as_ref().clone(),
+        }
+    }
+}

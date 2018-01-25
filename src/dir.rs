@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::{PathAbs, PathType};
+use super::{PathAbs, PathArc, PathType};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// A `PathAbs` that is guaranteed to be a directory, with associated methods.
@@ -329,8 +329,48 @@ impl Deref for PathDir {
 }
 
 impl Into<PathAbs> for PathDir {
+    /// Downgrades the `PathDir` into a `PathAbs`
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use std::path::PathBuf;
+    /// use path_abs::{PathDir, PathAbs};
+    ///
+    /// # fn main() {
+    /// let dir = PathDir::new("src").unwrap();
+    /// let abs: PathAbs = dir.into();
+    /// # }
+    /// ```
     fn into(self) -> PathAbs {
         self.0
+    }
+}
+
+impl Into<PathArc> for PathDir {
+    /// Downgrades the `PathDir` into a `PathArc`
+    fn into(self) -> PathArc {
+        (self.0).0
+    }
+}
+
+impl Into<PathBuf> for PathDir {
+    /// Downgrades the `PathDir` into a `PathBuf`. Avoids a clone if this is the only reference.
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use path_abs::PathDir;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn main() {
+    /// let dir = PathDir::new("src").unwrap();
+    /// let buf: PathBuf = dir.into();
+    /// # }
+    /// ```
+    fn into(self) -> PathBuf {
+        let arc: PathArc = self.into();
+        arc.into()
     }
 }
 
