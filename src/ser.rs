@@ -18,52 +18,41 @@ use std::ffi::OsString;
 #[cfg(windows)]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-use super::{PathAbs, PathDir, PathFile};
+use super::{PathAbs, PathArc, PathDir, PathFile};
 
-macro_rules! map_err { ($s: expr, $res: expr) => {{
-    match $res {
-        Ok(v) => Ok(v),
-        // FIXME: change degug->display
-        Err(err) => Err(serde::de::Error::custom(&format!("{}: {:?}", $s, err))),
-    }
+macro_rules! map_err { ($res: expr) => {{
+    $res.map_err(|err| serde::de::Error::custom(&err.to_string()))
 }}}
 
-#[derive(Debug)]
-// FIXME: flush out this error type
-pub enum DeserError {
-    Decode(stfu8::DecodeError),
-    Filesystem(::std::io::Error),
-}
-
-impl PathAbs {
+impl PathArc {
     #[cfg(unix)]
-    pub fn to_stfu8(&self) -> String {
+    pub(crate) fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
         stfu8::encode_u8(bytes)
     }
 
     #[cfg(windows)]
-    pub fn to_stfu8(&self) -> String {
+    pub(crate) fn to_stfu8(&self) -> String {
         let wide: Vec<u16> = self.as_os_str().encode_wide().collect();
         stfu8::encode_u16(&wide)
     }
 
     #[cfg(unix)]
-    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u8(&s).map_err(|e| DeserError::Decode(e))?;
+    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        let raw_path = stfu8::decode_u8(&s)?;
         let os_str = OsStr::from_bytes(&raw_path);
-        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
+        Ok(PathArc::new(os_str))
     }
 
     #[cfg(windows)]
-    pub fn from_stfu8(s: &str) -> Result<PathAbs, DeserError> {
-        let raw_path = stfu8::decode_u16(&s).map_err(|e| DeserError::Decode(e))?;
+    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        let raw_path = stfu8::decode_u16(&s)?;
         let os_str = OsString::from_wide(&raw_path);
-        PathAbs::new(os_str).map_err(|e| DeserError::Filesystem(e))
+        Ok(PathArc::new(os_str))
     }
 }
 
-impl Serialize for PathAbs {
+impl Serialize for PathArc {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -72,13 +61,32 @@ impl Serialize for PathAbs {
     }
 }
 
+impl<'de> Deserialize<'de> for PathArc {
+    fn deserialize<D>(deserializer: D) -> Result<PathArc, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        map_err!(PathArc::from_stfu8(&s))
+    }
+}
+
+impl Serialize for PathAbs {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
 impl<'de> Deserialize<'de> for PathAbs {
     fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        map_err!(s, PathAbs::from_stfu8(&s))
+        let arc = PathArc::deserialize(deserializer)?;
+        map_err!(PathAbs::new(arc))
     }
 }
 
