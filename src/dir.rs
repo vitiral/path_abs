@@ -328,11 +328,17 @@ impl Deref for PathDir {
     }
 }
 
+impl Into<PathAbs> for PathDir {
+    fn into(self) -> PathAbs {
+        self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use tempdir::TempDir;
     use std::collections::HashSet;
-    use super::super::{PathDir, PathFile, PathType};
+    use super::super::{PathAbs, PathDir, PathFile, PathType};
 
     #[test]
     fn sanity_list() {
@@ -348,9 +354,13 @@ mod tests {
         }
 
         let mut expected = HashSet::new();
-        expected.insert(PathType::Dir(foo_dir));
-        expected.insert(PathType::File(bar_file));
+        expected.insert(PathType::Dir(foo_dir.clone()));
+        expected.insert(PathType::File(bar_file.clone()));
 
         assert_eq!(expected, result);
+
+        // just ensure that this compiles
+        let _: PathAbs = foo_dir.into();
+        let _: PathAbs = bar_file.into();
     }
 }

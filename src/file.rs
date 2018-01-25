@@ -352,3 +352,9 @@ impl Deref for PathFile {
         &self.0
     }
 }
+
+impl Into<PathAbs> for PathFile {
+    fn into(self) -> PathAbs {
+        self.0
+    }
+}
