@@ -15,27 +15,27 @@ use std::path::Path;
 use std::ops::Deref;
 
 use super::PathFile;
-use super::open::PathOpen;
+use super::open::FileOpen;
 
 /// An open file read only file. Get the associated `PathFile` with with the `path()`
 /// method.
 ///
 /// > This type is not serializable.
-pub struct FileRead(pub(crate) PathOpen);
+pub struct FileRead(pub(crate) FileOpen);
 
 impl FileRead {
     /// Open the file with the given `OpenOptions` but always sets `write` to true.
     pub fn read<P: AsRef<Path>>(path: P) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(FileRead(PathOpen::open(path, options)?))
+        Ok(FileRead(FileOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
     pub(crate) fn read_path(path: PathFile) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(FileRead(PathOpen::open_file(path, options)?))
+        Ok(FileRead(FileOpen::open_file(path, options)?))
     }
 }
 
@@ -58,10 +58,21 @@ impl io::Read for FileRead {
     }
 }
 
-impl Deref for FileRead {
-    type Target = PathOpen;
+impl io::Seek for FileRead {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.0.file.seek(pos).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} seeking {}", err, self.path().display()),
+            )
+        })
+    }
+}
 
-    fn deref(&self) -> &PathOpen {
+impl Deref for FileRead {
+    type Target = FileOpen;
+
+    fn deref(&self) -> &FileOpen {
         &self.0
     }
 }

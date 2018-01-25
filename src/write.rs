@@ -15,25 +15,25 @@ use std::path::Path;
 use std::ops::Deref;
 
 use super::PathFile;
-use super::open::PathOpen;
+use super::open::FileOpen;
 
 /// An open file which can be written to. Get the associated `PathFile` with with the `path()`
 /// method.
 ///
 /// > This type is not serializable.
-pub struct FileWrite(pub(crate) PathOpen);
+pub struct FileWrite(pub(crate) FileOpen);
 
 impl FileWrite {
     /// Open the file with the given `OpenOptions` but always sets `write` to true.
     pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
         options.write(true);
-        Ok(FileWrite(PathOpen::open(path, options)?))
+        Ok(FileWrite(FileOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
     pub(crate) fn open_path(path_file: PathFile, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
         options.write(true);
-        Ok(FileWrite(PathOpen::open_file(path_file, options)?))
+        Ok(FileWrite(FileOpen::open_file(path_file, options)?))
     }
 
     /// Open the file in write-only mode, truncating it first if it exists and creating it
@@ -162,10 +162,21 @@ impl io::Write for FileWrite {
     }
 }
 
-impl Deref for FileWrite {
-    type Target = PathOpen;
+impl io::Seek for FileWrite {
+    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
+        self.0.file.seek(pos).map_err(|err| {
+            io::Error::new(
+                err.kind(),
+                format!("{} seeking {}", err, self.path().display()),
+            )
+        })
+    }
+}
 
-    fn deref(&self) -> &PathOpen {
+impl Deref for FileWrite {
+    type Target = FileOpen;
+
+    fn deref(&self) -> &FileOpen {
         &self.0
     }
 }

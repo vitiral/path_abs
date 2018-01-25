@@ -191,24 +191,112 @@ impl PathFile {
     }
 
     /// Open the file as read-only.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use std::io::Read;
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = "target/example.txt";
+    /// # let _ = ::std::fs::remove_file(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar";
+    /// file.write_str(expected).unwrap();
+    ///
+    /// let mut read = file.read().unwrap();
+    /// let mut s = String::new();
+    /// read.read_to_string(&mut s).unwrap();
+    /// assert_eq!(expected, s);
+    /// # }
+    /// ```
     pub fn read(&self) -> io::Result<FileRead> {
         FileRead::read_path(self.clone())
     }
 
-    /// Open the file for editing (reading and writing) but do not create it
-    /// if it doesn't exist.
-    pub fn edit(&self) -> io::Result<FileEdit> {
-        FileEdit::open_path(self.clone(), fs::OpenOptions::new())
-    }
-
     /// Open the file in append mode.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use std::io::Write;
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = "target/example.txt";
+    /// # let _ = ::std::fs::remove_file(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar\n";
+    /// file.write_str("foo\n").unwrap();
+    ///
+    /// let mut append = file.append().unwrap();
+    /// append.write_all(b"bar\n").unwrap();
+    /// append.flush();
+    /// assert_eq!(expected, file.read_string().unwrap());
+    /// # }
+    /// ```
     pub fn append(&self) -> io::Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
         FileWrite::open_path(self.clone(), options)
     }
 
+    /// Open the file for editing (reading and writing).
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use std::io::{Read, Seek, Write, SeekFrom};
+    /// use path_abs::PathFile;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = "target/example.txt";
+    /// # let _ = ::std::fs::remove_file(example);
+    /// let file = PathFile::create(example).unwrap();
+    ///
+    /// let expected = "foo\nbar";
+    ///
+    /// let mut edit = file.edit().unwrap();
+    /// let mut s = String::new();
+    ///
+    /// edit.write_all(expected.as_bytes()).unwrap();
+    /// edit.seek(SeekFrom::Start(0)).unwrap();
+    /// edit.read_to_string(&mut s).unwrap();
+    /// assert_eq!(expected, s);
+    /// # }
+    /// ```
+    pub fn edit(&self) -> io::Result<FileEdit> {
+        FileEdit::open_path(self.clone(), fs::OpenOptions::new())
+    }
+
     /// Remove (delete) the file from the filesystem, consuming self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathFile;
+    /// use std::path::Path;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = "target/example.txt";
+    /// # let _ = ::std::fs::remove_file(example);
+    /// let file = PathFile::create(example).unwrap();
+    /// assert!(file.exists());
+    /// file.remove().unwrap();
+    ///
+    /// // Note: file was consumed.
+    /// // file.exists() <--- COMPILER ERROR
+    ///
+    /// assert!(!Path::new(example).exists());
+    /// # }
+    /// ```
     pub fn remove(self) -> io::Result<()> {
         fs::remove_file(&self).map_err(|err| {
             io::Error::new(

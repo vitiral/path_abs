@@ -15,17 +15,17 @@ use std::convert::AsRef;
 
 use super::PathFile;
 
-/// > **INTERNAL TYPE: do not use directly.**
+/// **INTERNAL TYPE: do not use directly.**
 ///
-/// Use `PathWrite` and `PathRead` instead.
-pub struct PathOpen {
+/// Use `FileRead`, `FileWrite` or `FileEdit` instead.
+pub struct FileOpen {
     pub(crate) path: PathFile,
     pub(crate) file: fs::File,
 }
 
-impl PathOpen {
+impl FileOpen {
     /// Open the file with the given `OpenOptions`.
-    pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> io::Result<PathOpen> {
+    pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> io::Result<FileOpen> {
         let file = options.open(&path).map_err(|err| {
             io::Error::new(
                 err.kind(),
@@ -34,7 +34,7 @@ impl PathOpen {
         })?;
 
         let path = PathFile::new(path)?;
-        Ok(PathOpen {
+        Ok(FileOpen {
             path: path,
             file: file,
         })
@@ -44,7 +44,7 @@ impl PathOpen {
     ///
     /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).
-    pub fn open_file(path_file: PathFile, options: fs::OpenOptions) -> io::Result<PathOpen> {
+    pub fn open_file(path_file: PathFile, options: fs::OpenOptions) -> io::Result<FileOpen> {
         let file = options.open(&path_file).map_err(|err| {
             io::Error::new(
                 err.kind(),
@@ -52,7 +52,7 @@ impl PathOpen {
             )
         })?;
 
-        Ok(PathOpen {
+        Ok(FileOpen {
             path: path_file,
             file: file,
         })
@@ -81,24 +81,24 @@ impl PathOpen {
     /// Creates a new independently owned handle to the underlying file.
     ///
     /// This function is identical to [std::fs::File::try_clone][0] except it has error
-    /// messages which include the action and the path and it returns a `PathOpen` object.
+    /// messages which include the action and the path and it returns a `FileOpen` object.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.try_clone
-    pub fn try_clone(&self) -> io::Result<PathOpen> {
+    pub fn try_clone(&self) -> io::Result<FileOpen> {
         let file = self.file.try_clone().map_err(|err| {
             io::Error::new(
                 err.kind(),
                 format!("{} when cloning {}", err, self.path.display()),
             )
         })?;
-        Ok(PathOpen {
+        Ok(FileOpen {
             file: file,
             path: self.path.clone(),
         })
     }
 }
 
-impl fmt::Debug for PathOpen {
+impl fmt::Debug for FileOpen {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Open(")?;
         self.path.fmt(f)?;
@@ -106,19 +106,8 @@ impl fmt::Debug for PathOpen {
     }
 }
 
-impl Into<fs::File> for PathOpen {
+impl Into<fs::File> for FileOpen {
     fn into(self) -> fs::File {
         self.file
-    }
-}
-
-impl io::Seek for PathOpen {
-    fn seek(&mut self, pos: io::SeekFrom) -> io::Result<u64> {
-        self.file.seek(pos).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} seeking {}", err, self.path().display()),
-            )
-        })
     }
 }
