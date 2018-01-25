@@ -57,7 +57,7 @@ impl Serialize for PathArc {
     where
         S: Serializer,
     {
-        self.0.serialize(serializer)
+        serializer.serialize_str(&self.to_stfu8())
     }
 }
 
@@ -67,7 +67,6 @@ impl<'de> Deserialize<'de> for PathArc {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-
         map_err!(PathArc::from_stfu8(&s))
     }
 }
@@ -86,8 +85,7 @@ impl<'de> Deserialize<'de> for PathAbs {
     where
         D: Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        let arc = map_err!(PathArc::from_stfu8(&s))?;
+        let arc = PathArc::deserialize(deserializer)?;
         map_err!(PathAbs::from_arc(arc))
     }
 }
