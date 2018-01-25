@@ -54,7 +54,10 @@ impl FileWrite {
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
-    pub(crate) fn open_path(path_file: PathFile, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
+    pub(crate) fn open_path(
+        path_file: PathFile,
+        mut options: fs::OpenOptions,
+    ) -> io::Result<FileWrite> {
         options.write(true);
         Ok(FileWrite(FileOpen::open_file(path_file, options)?))
     }

@@ -220,13 +220,18 @@ mod tests {
         {
             let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
             foo.clone().remove().unwrap();
-            assert_match!(
+            let pat = if cfg!(unix) {
                 format!(
                     r"No such file or directory \(os error \d+\) when opening {}",
                     escape(&foo)
-                ),
-                foo.edit().unwrap_err()
-            );
+                )
+            } else {
+                format!(
+                    r"The system cannot find the file specified. \(os error \d+\) when opening {}",
+                    escape(&foo)
+                )
+            };
+            assert_match!(pat, foo.edit().unwrap_err())
         }
     }
 }

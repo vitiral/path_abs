@@ -180,7 +180,6 @@ impl io::Read for FileEdit {
     }
 }
 
-
 impl io::Write for FileEdit {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.file.write(buf).map_err(|err| {

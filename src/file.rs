@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
-use super::{PathAbs, FileEdit, FileRead, FileWrite};
+use super::{FileEdit, FileRead, FileWrite, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that is guaranteed to be a file, with associated methods.
