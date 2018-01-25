@@ -21,6 +21,30 @@ use super::open::FileOpen;
 /// method.
 ///
 /// > This type is not serializable.
+///
+/// # Examples
+/// ```rust
+/// # extern crate path_abs;
+/// # extern crate tempdir;
+/// use std::io::Read;
+/// use path_abs::{PathFile, FileRead};
+///
+/// # fn main() {
+///
+/// let example = "example.txt";
+/// # let tmp = tempdir::TempDir::new("ex").unwrap();
+/// # let example = &tmp.path().join(example);
+/// let file = PathFile::create(example).unwrap();
+///
+/// let expected = "foo\nbar";
+/// file.write_str(expected).unwrap();
+///
+/// let mut read = FileRead::read(example).unwrap();
+/// let mut s = String::new();
+/// read.read_to_string(&mut s).unwrap();
+/// assert_eq!(expected, s);
+/// # }
+/// ```
 pub struct FileRead(pub(crate) FileOpen);
 
 impl FileRead {

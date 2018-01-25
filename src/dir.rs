@@ -203,6 +203,31 @@ impl PathDir {
     }
 
     /// Remove (delete) the _empty_ directory from the filesystem, consuming self.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::path::Path;
+    /// use path_abs::PathDir;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = Path::new("example/long/path");
+    ///
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    ///
+    /// let dir = PathDir::create_all(example).unwrap();
+    /// let parent = dir.parent_dir().unwrap();
+    ///
+    /// assert!(example.exists());
+    /// dir.remove().unwrap();
+    /// // assert!(dir.exists());  <--- COMPILE ERROR
+    /// assert!(!example.exists());
+    /// parent.remove().unwrap();
+    /// # }
+    /// ```
     pub fn remove(self) -> io::Result<()> {
         fs::remove_dir(&self).map_err(|err| {
             io::Error::new(
@@ -213,6 +238,29 @@ impl PathDir {
     }
 
     /// Remove (delete) the directory, after recursively removing its contents. Use carefully!
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use std::path::Path;
+    /// use path_abs::PathDir;
+    ///
+    /// # fn main() {
+    ///
+    /// let example = Path::new("example/long/path");
+    ///
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
+    ///
+    /// let dir = PathDir::create_all(example).unwrap();
+    /// let parent = dir.parent_dir().unwrap();
+    ///
+    /// assert!(example.exists());
+    /// parent.remove_all().unwrap();
+    /// assert!(!example.exists());
+    /// # }
+    /// ```
     pub fn remove_all(self) -> io::Result<()> {
         fs::remove_dir_all(&self).map_err(|err| {
             io::Error::new(
