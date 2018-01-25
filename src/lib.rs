@@ -5,57 +5,112 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-//! Absolute serializable path types and associated methods and better errors.
+//! Ergonomic paths and files in rust.
+//!
+//! This library aims to provide ergonomic path and file operations to rust with
+//! reasonable performance.
+//!
+//! This includes:
+//!
+//! - Improved error messages, see the **Better Errors** section.
+//! - Improved type safety. The types specify that a file _once_ existed and was _once_ a certain
+//!   type. Obviously a file/directory can be deleted/changed by another process.
+//! - More stringent mutability requirements. See the **Differing Method Signatures** section.
+//! - Cheap cloning: all path types are `Arc`, which a cheap operation compared to filesystem
+//!   operations and allows more flexibility and ergonomics in the library for relatively low cost.
+//!
+//! Also see the [project repo](https://github.com/vitiral/path_abs) for more information about the
+//! motivation for this crate. Consider leaving a star!
+//!
 //!
 //! ## Better Errors
 //!
-//! `set_len`:
+//! All errors include the **path** and **action** which caused the error, as well as the unaltered
+//! `std::io::Error` message. Errors are `std::io::Error`, giving almost complete compatibility
+//! with existing code.
 //!
-//! - [`/**/ std::fs::File::set_len(0)`][file_set_len]: `Invalid argument (os error 22)`
-//! - [`path_abs::PathOpen::set_len(0)`][path_set_len]: `Invalid argument (os error 22) when setting
+//! ### `set_len` (i.e. truncate a file):
+//!
+//! - [`/* */ std::fs::File::set_len(0)`][file_set_len]: `Invalid argument (os error 22)`
+//! - [`path_abs::FileWrite::set_len(0)`][path_set_len]: `Invalid argument (os error 22) when setting
 //!   len for /path/to/example/foo.txt`
 //!
-//! `read` (open file for reading):
+//! > The above error is actually impossible because `FileWrite` is always writeable, and
+//! > `FileRead` does not implement `set_len`. However, it is kept for demonstration.
+//!
+//! ### `read` (open file for reading):
 //!
 //! - [`/**/ std::fs::File::read(path)`][file_read]: `No such file or directory (os error 2)`
-//! - [`path_abs::PathOpen::read(path)`][path_read]: `No such file or directory (os error 2) when
+//! - [`path_abs::FileRead::read(path)`][path_read]: `No such file or directory (os error 2) when
 //!   opening example/foo.txt`
 //!
 //! And every other method has similarily improved errors. If a method does not have pretty error
 //! messages please open a ticket.
 //!
-//! ## Exported Types
+//! [file_set_len]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
+//! [file_read]: https://doc.rust-lang.org/std/fs/struct.File.html#method.read
+//! [path_set_len]: struct.FileWrite.html#method.set_len
+//! [path_read]: struct.FileRead.html#method.read
+//!
+//!
+//! ## Exported Path Types
+//!
+//! These are the exported Path types. All of them are absolute except for `PathArc`, which
+//! is just an `Arc<PathBuf>` with methods that have better error reporting.
 //!
 //! - [`PathArc`](struct.PathArc.html): a reference counted `PathBuf` with methods reimplemented
-//!   with better error messages. Use this for a "generic serializable path".
+//!   with better error messages. Use this for a generic serializable path that may or may
+//!   not exist.
 //! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (canonicalized) path that is
-//!   guaranteed (when created) to exist.
+//!   guaranteed (on initialization) to exist.
 //! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
 //!   associated methods.
 //! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
 //!   associated methods.
-//! - [`PathType`](struct.PathType.html): an enum containing either a file or a directory. Returned
-//!   by [`PathDir::list`][dir_list]
-//! - [`FileRead`](struct.FileRead.html): an open read-only file with the `path()` attached and error
-//!   messages which include the path information.
-//! - [`FileWrite`](struct.FileRead.html): an open write-only or appending file with the `path()`
-//!   attached and error messages which include the path information.
+//! - [`PathType`](struct.PathType.html): an enum containing either a PathFile or a PathDir.
+//!   Returned by [`PathDir::list`][dir_list]
 //!
-//! In addition, all types (expect `PathOpen`) are serializable through serde (even on windows!) by
-//! using the crate [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed
-//! UTF-16. See that crate for more details on how the resulting encoding can be edited (by hand)
-//! even in the case of what *would be* ill-formed UTF-16.
+//! In addition, all paths are serializable through serde (even on windows!) by using the crate
+//! [`stfu8`](https://crates.io/crates/stfu8) to encode/decode, allowing ill-formed UTF-16. See
+//! that crate for more details on how the resulting encoding can be edited (by hand) even in the
+//! case of what *would be* ill-formed UTF-16.
 //!
-//! Also see the [project repo](https://github.com/vitiral/path_abs) and consider leaving a star!
-//!
-//! > All types are internally `Arc<PathBuf>` so they are extremely cheap to clone. When working
-//! > with paths a reference count is NOT an expensive operation for you!
-//!
-//! [file_set_len]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
-//! [file_read]: https://doc.rust-lang.org/std/fs/struct.File.html#method.read
-//! [path_set_len]: struct.PathOpen.html#method.set_len)
-//! [path_read]: struct.PathOpen.html#method.read)
 //! [dir_list]: struct.PathDir.html#method.list)
+//!
+//!
+//! ## Exported File Types
+//!
+//! All File types provide _type safe_ access to their relevant traits. For instance, you can't
+//! `read` with a `FileWrite` and you can't `write` with a `FileRead`.
+//!
+//! - [`FileRead`](struct.FileRead.html): a read-only file handle with `path()` attached and
+//!   improved error messages. Contains only the methods and trait implementations which are
+//!   allowed by a read-only file.
+//! - [`FileWrite`](struct.FileWrite.html): a write-only file handle with `path()` attached and
+//!   improved error messages. Contains only the methods and trait implementations which are
+//!   allowed by a write-only file.
+//! - [`FileEdit`](struct.FileEdit.html): a read/write file handle with `path()` attached and
+//!   improved error messages. Contains methods and trait implements for both readable _and_
+//!   writeable files.
+//!
+//! ### Differing Method Signatures
+//!
+//! The type signatures of the `File*` types regarding `read`, `write` and other methods is
+//! slightly different than `std::fs::File` -- they all take `&mut` instead of `&`. This is to
+//! avoid a [common possible footgun](https://github.com/rust-lang/rust/issues/47708).
+//!
+//! To demonstrate, imagine the following scenario:
+//!
+//! - You pass your open `&File` to a method, which puts it in a thread. This thread constantly
+//!   calls `seek(SeekFrom::Start(10))`
+//! - You periodically read from a file expecting new data, but are always getting the same data.
+//!
+//! Yes, this is actually allowed by the rust compiler since `seek` is implemented for
+//! [`&File`](https://doc.rust-lang.org/std/fs/struct.File.html#impl-Seek-1). Technically this is
+//! still _memory safe_ since the operating system will handle any contention, however many would
+//! argue that it isn't _expected_ that an immutable reference passed to another
+//! function can affect the seek position of a file.
+//!
 //!
 //! # Examples
 //! Recreating `Cargo.init` in `example/`
@@ -76,9 +131,7 @@
 //! };
 //!
 //! # fn main() {
-//!
 //! let example = Path::new("example");
-//!
 //! # let tmp = tempdir::TempDir::new("ex").unwrap();
 //! # let example = &tmp.path().join(example);
 //!
@@ -102,40 +155,45 @@
 //! [package]
 //! name = "example"
 //! version = "0.1.0"
-//! authors = ["Garrett Berg <googberg@gmail.com>"]
+//! authors = ["Garrett Berg <vitiral@gmail.com>"]
 //!
 //! [dependencies]
 //! "#).unwrap();
 //!
+//! // Put our result into a HashMap so we can assert it
 //! let mut result = HashSet::new();
 //! for p in project.list().unwrap() {
 //!     result.insert(p.unwrap());
 //! }
 //!
+//! // Create our expected value
 //! let mut expected = HashSet::new();
 //! expected.insert(PathType::Dir(src));
 //! expected.insert(PathType::File(cargo));
 //!
 //! assert_eq!(expected, result);
 //!
-//! // Get a file
+//! // ----------------------------------
+//! // Creating types from existing paths
+//!
+//! // Creating a generic path
 //! let lib_path = example.join("src").join("lib.rs");
 //! let abs = PathAbs::new(&lib_path).unwrap();
 //!
-//! // or get the file of known type
+//! // Or a path with a known type
 //! let file = PathType::new(&lib_path)
 //!     .unwrap()
 //!     .unwrap_file();
 //!
-//! // or use `into_file`
+//! // Or use `PathAbs::into_file`
 //! let file2 = abs.clone().into_file().unwrap();
 //!
 //! assert!(abs.is_file());
 //! assert!(file.is_file());
 //! assert!(file2.is_file());
 //!
-//! // In addition, you can get a handle to an open file.
-//! // (Not really part of the cargo example)
+//! // ----------------------------------
+//! // Opening a File
 //!
 //! // open read-only using the PathFile method
 //! let read = file.read().unwrap();

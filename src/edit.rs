@@ -17,10 +17,8 @@ use std::ops::Deref;
 use super::PathFile;
 use super::open::FileOpen;
 
-/// An open file which can be written to. Get the associated `PathFile` with with the `path()`
-/// method.
-///
-/// > This type is not serializable.
+/// A read/write file handle with `path()` attached and improved error messages. Contains methods
+/// and trait implements for both readable _and_ writeable files.
 ///
 /// # Examples
 /// ```rust
@@ -30,7 +28,6 @@ use super::open::FileOpen;
 /// use path_abs::FileEdit;
 ///
 /// # fn main() {
-///
 /// let example = "example.txt";
 /// # let tmp = tempdir::TempDir::new("ex").unwrap();
 /// # let example = &tmp.path().join(example);
@@ -49,7 +46,7 @@ use super::open::FileOpen;
 pub struct FileEdit(pub(crate) FileOpen);
 
 impl FileEdit {
-    /// Open the file with the given `OpenOptions` but always sets `write` to true.
+    /// Open the file with the given `OpenOptions` but always sets `read` and `write` to true.
     pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> io::Result<FileEdit> {
         options.write(true);
         options.read(true);
@@ -60,7 +57,7 @@ impl FileEdit {
     pub(crate) fn open_path(path: PathFile, mut options: fs::OpenOptions) -> io::Result<FileEdit> {
         options.write(true);
         options.read(true);
-        Ok(FileEdit(FileOpen::open_file(path, options)?))
+        Ok(FileEdit(FileOpen::open_path(path, options)?))
     }
 
     /// Open the file in editing mode, truncating it first if it exists and creating it

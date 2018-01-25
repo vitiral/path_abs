@@ -26,26 +26,26 @@ macro_rules! map_err { ($res: expr) => {{
 
 impl PathArc {
     #[cfg(unix)]
-    pub fn to_stfu8(&self) -> String {
+    pub(crate) fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
         stfu8::encode_u8(bytes)
     }
 
     #[cfg(windows)]
-    pub fn to_stfu8(&self) -> String {
+    pub(crate) fn to_stfu8(&self) -> String {
         let wide: Vec<u16> = self.as_os_str().encode_wide().collect();
         stfu8::encode_u16(&wide)
     }
 
     #[cfg(unix)]
-    pub fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u8(&s)?;
         let os_str = OsStr::from_bytes(&raw_path);
         Ok(PathArc::new(os_str))
     }
 
     #[cfg(windows)]
-    pub fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u16(&s)?;
         let os_str = OsString::from_wide(&raw_path);
         Ok(PathArc::new(os_str))
@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for PathAbs {
         D: Deserializer<'de>,
     {
         let arc = PathArc::deserialize(deserializer)?;
-        map_err!(PathAbs::from_arc(arc))
+        map_err!(PathAbs::new(arc))
     }
 }
 

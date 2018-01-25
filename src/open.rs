@@ -44,16 +44,16 @@ impl FileOpen {
     ///
     /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).
-    pub fn open_file(path_file: PathFile, options: fs::OpenOptions) -> io::Result<FileOpen> {
-        let file = options.open(&path_file).map_err(|err| {
+    pub fn open_path(path: PathFile, options: fs::OpenOptions) -> io::Result<FileOpen> {
+        let file = options.open(&path).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when opening {}", err, path_file.display()),
+                format!("{} when opening {}", err, path.display()),
             )
         })?;
 
         Ok(FileOpen {
-            path: path_file,
+            path: path,
             file: file,
         })
     }

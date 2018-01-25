@@ -17,10 +17,8 @@ use std::ops::Deref;
 use super::PathFile;
 use super::open::FileOpen;
 
-/// An open file which can be written to. Get the associated `PathFile` with with the `path()`
-/// method.
-///
-/// > This type is not serializable.
+/// A write-only file handle with `path()` attached and improved error messages. Contains only the
+/// methods and trait implementations which are allowed by a write-only file.
 ///
 /// # Examples
 /// ```rust
@@ -30,7 +28,6 @@ use super::open::FileOpen;
 /// use path_abs::{PathFile, FileWrite};
 ///
 /// # fn main() {
-///
 /// let example = "example.txt";
 /// # let tmp = tempdir::TempDir::new("ex").unwrap();
 /// # let example = &tmp.path().join(example);
@@ -59,7 +56,7 @@ impl FileWrite {
         mut options: fs::OpenOptions,
     ) -> io::Result<FileWrite> {
         options.write(true);
-        Ok(FileWrite(FileOpen::open_file(path_file, options)?))
+        Ok(FileWrite(FileOpen::open_path(path_file, options)?))
     }
 
     /// Open the file in write-only mode, truncating it first if it exists and creating it

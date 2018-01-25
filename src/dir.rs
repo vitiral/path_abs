@@ -22,7 +22,7 @@ pub struct PathDir(pub(crate) PathAbs);
 impl PathDir {
     /// Instantiate a new `PathDir`. The directory must exist or `io::Error` will be returned.
     ///
-    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a dir.
+    /// Returns `io::ErrorKind::InvalidInput` if the path exists but is not a directory.
     ///
     /// # Examples
     /// ```rust
@@ -43,7 +43,7 @@ impl PathDir {
     ///
     /// If the path is actually a file returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input
+    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
     /// > already a fully qualified path.
     ///
     /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
@@ -69,7 +69,7 @@ impl PathDir {
         }
     }
 
-    /// Instantiate a new `PathDir` to a directory, creating it first if it doesn't exist.
+    /// Instantiate a new `PathDir` to a directory, creating the directory if it doesn't exist.
     ///
     /// # Examples
     /// ```rust
@@ -78,9 +78,7 @@ impl PathDir {
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
     /// let example = "example";
-    ///
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
     ///
@@ -115,9 +113,7 @@ impl PathDir {
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
     /// let example = "example/long/path";
-    ///
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
     ///
@@ -169,7 +165,6 @@ impl PathDir {
     /// use path_abs::{PathDir, PathFile, PathType};
     ///
     /// # fn main() {
-    ///
     /// let example = "example";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join("example");
@@ -212,9 +207,7 @@ impl PathDir {
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
     /// let example = Path::new("example/long/path");
-    ///
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
     ///
@@ -247,9 +240,7 @@ impl PathDir {
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
-    ///
     /// let example = Path::new("example/long/path");
-    ///
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
     ///

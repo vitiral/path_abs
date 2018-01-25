@@ -16,7 +16,7 @@ use std::convert::AsRef;
 use super::{FileEdit, FileRead, FileWrite, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// a `PathAbs` that is guaranteed to be a file, with associated methods.
+/// a `PathAbs` that was a file at the time of initialization, with associated methods.
 pub struct PathFile(pub(crate) PathAbs);
 
 impl PathFile {
@@ -43,7 +43,7 @@ impl PathFile {
     ///
     /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input
+    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
     /// > already a fully qualified path.
     ///
     /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
@@ -69,7 +69,7 @@ impl PathFile {
         }
     }
 
-    /// Instantiate a new `PathFile`, creating it first if it doesn't exist.
+    /// Instantiate a new `PathFile`, creating an empty file if it doesn't exist.
     ///
     /// # Examples
     /// ```rust
@@ -78,7 +78,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -115,7 +114,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -145,7 +143,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -169,9 +166,6 @@ impl PathFile {
     }
 
     /// Append the `str` to a file, creating it if it doesn't exist.
-    ///
-    /// If the `str` is empty, this is equivalent to the unix `touch`
-    /// except it does NOT update the timestamp
     ///
     /// # Examples
     /// ```rust
@@ -210,7 +204,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -229,7 +222,7 @@ impl PathFile {
         FileRead::read_path(self.clone())
     }
 
-    /// Open the file in append mode.
+    /// Open the file as write-only in append mode.
     ///
     /// # Examples
     /// ```rust
@@ -239,7 +232,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -270,7 +262,6 @@ impl PathFile {
     /// use path_abs::PathFile;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);
@@ -301,7 +292,6 @@ impl PathFile {
     /// use std::path::Path;
     ///
     /// # fn main() {
-    ///
     /// let example = "example.txt";
     /// # let tmp = tempdir::TempDir::new("ex").unwrap();
     /// # let example = &tmp.path().join(example);

@@ -17,10 +17,8 @@ use std::ops::Deref;
 use super::PathFile;
 use super::open::FileOpen;
 
-/// An open file read only file. Get the associated `PathFile` with with the `path()`
-/// method.
-///
-/// > This type is not serializable.
+/// A read-only file handle with `path()` attached and improved error messages. Contains only the
+/// methods and trait implementations which are allowed by a read-only file.
 ///
 /// # Examples
 /// ```rust
@@ -30,7 +28,6 @@ use super::open::FileOpen;
 /// use path_abs::{PathFile, FileRead};
 ///
 /// # fn main() {
-///
 /// let example = "example.txt";
 /// # let tmp = tempdir::TempDir::new("ex").unwrap();
 /// # let example = &tmp.path().join(example);
@@ -48,7 +45,7 @@ use super::open::FileOpen;
 pub struct FileRead(pub(crate) FileOpen);
 
 impl FileRead {
-    /// Open the file with the given `OpenOptions` but always sets `write` to true.
+    /// Open the file as read-only.
     pub fn read<P: AsRef<Path>>(path: P) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
@@ -59,7 +56,7 @@ impl FileRead {
     pub(crate) fn read_path(path: PathFile) -> io::Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(FileRead(FileOpen::open_file(path, options)?))
+        Ok(FileRead(FileOpen::open_path(path, options)?))
     }
 }
 
