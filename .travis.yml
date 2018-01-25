@@ -16,6 +16,5 @@ notifications:
     on_success: never
 
 script:
-  # TODO: test-threads=1 temporarily
-  - RUST_BACKTRACE=1 cargo test --verbose --all -- --nocapture --test-threads=1
-  - RUST_BACKTRACE=1 cargo test --verbose --all --no-default-features -- --nocapture --test-threads=1
+  - RUST_BACKTRACE=1 cargo test --verbose --all -- --nocapture
+  - RUST_BACKTRACE=1 cargo test --verbose --all --no-default-features -- --nocapture

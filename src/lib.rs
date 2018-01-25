@@ -58,18 +58,29 @@
 //! [dir_list]: struct.PathDir.html#method.list)
 //!
 //! # Examples
-//! Recreating `Cargo.init` in `target/example`
+//! Recreating `Cargo.init` in `example/`
 //!
 //! ```rust
 //! # extern crate path_abs;
+//! # extern crate tempdir;
+//! use std::path::Path;
 //! use std::collections::HashSet;
-//! use path_abs::{PathAbs, PathDir, PathFile, PathType};
+//! use path_abs::{
+//!     PathAbs,   // absolute path that exists
+//!     PathDir,   // absolute path to a directory
+//!     PathFile,  // absolute path to a file
+//!     PathType,  // enum of Dir or File
+//!     FileRead,  // Open read-only file handler
+//!     FileWrite, // Open write-only file handler
+//!     FileEdit,  // Open read/write file handler
+//! };
 //!
 //! # fn main() {
 //!
-//! let example = "target/example";
+//! let example = Path::new("example");
 //!
-//! # let _ = ::std::fs::remove_dir_all(example);
+//! # let tmp = tempdir::TempDir::new("ex").unwrap();
+//! # let example = &tmp.path().join(example);
 //!
 //! // Create your paths
 //! let project = PathDir::create_all(example).unwrap();
@@ -108,10 +119,11 @@
 //! assert_eq!(expected, result);
 //!
 //! // Get a file
-//! let abs = PathAbs::new("target/example/src/lib.rs").unwrap();
+//! let lib_path = example.join("src").join("lib.rs");
+//! let abs = PathAbs::new(&lib_path).unwrap();
 //!
 //! // or get the file of known type
-//! let file = PathType::new("target/example/src/lib.rs")
+//! let file = PathType::new(&lib_path)
 //!     .unwrap()
 //!     .unwrap_file();
 //!
@@ -121,6 +133,18 @@
 //! assert!(abs.is_file());
 //! assert!(file.is_file());
 //! assert!(file2.is_file());
+//!
+//! // In addition, you can get a handle to an open file.
+//! // (Not really part of the cargo example)
+//!
+//! // open read-only using the PathFile method
+//! let read = file.read().unwrap();
+//!
+//! // Or use the type directly: open for appending
+//! let write = FileWrite::append(&file).unwrap();
+//!
+//! // Open for read/write editing.
+//! let edit = file.edit().unwrap();
 //! # }
 //! ```
 

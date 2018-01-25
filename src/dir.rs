@@ -74,13 +74,15 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example";
+    /// let example = "example";
     ///
-    /// # let _ = ::std::fs::remove_dir_all(example);
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let dir = PathDir::create(example).unwrap();
     ///
@@ -109,13 +111,15 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
     /// # fn main() {
     ///
-    /// let example = "target/example/long/path";
+    /// let example = "example/long/path";
     ///
-    /// # let _ = ::std::fs::remove_dir_all("target/example");
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join(example);
     ///
     /// let path = PathDir::create_all(example).unwrap();
     ///
@@ -160,16 +164,19 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
+    /// # extern crate tempdir;
     /// use std::collections::HashSet;
     /// use path_abs::{PathDir, PathFile, PathType};
     ///
     /// # fn main() {
     ///
-    /// # let _ = ::std::fs::remove_dir_all("target/example");
+    /// let example = "example";
+    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let example = &tmp.path().join("example");
     ///
-    /// let example_dir = PathDir::create("target/example").unwrap();
-    /// let foo_dir = PathDir::create("target/example/foo").unwrap();
-    /// let bar_file = PathFile::create("target/example/bar.txt").unwrap();
+    /// let example_dir = PathDir::create(example).unwrap();
+    /// let foo_dir = PathDir::create(example_dir.join("foo")).unwrap();
+    /// let bar_file = PathFile::create(example_dir.join("bar.txt")).unwrap();
     ///
     /// let mut result = HashSet::new();
     /// for p in example_dir.list().unwrap() {
