@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"
 name = "path_abs"
 readme = "README.md"
 repository = "https://github.com/vitiral/path_abs"
-version = "0.3.5"
+version = "0.3.6"
 
 [dependencies]
 std_prelude = "0.2.9"

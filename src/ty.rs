@@ -45,6 +45,11 @@ impl PathType {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathType> {
         let abs = PathAbs::new(&path)?;
+        PathType::from_abs(abs)
+    }
+
+    /// Consume the `PathAbs` returning the `PathType`.
+    fn from_abs(abs: PathAbs) -> Result<PathType> {
         let ty = abs.metadata()?.file_type();
         if ty.is_file() {
             Ok(PathType::File(PathFile(abs)))
