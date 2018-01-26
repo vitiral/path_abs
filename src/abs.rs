@@ -9,11 +9,10 @@
 //! (except for `PathArc`).
 use std::fmt;
 use std::ops::Deref;
-use std::io;
 use std::convert::AsRef;
 use std::path::Path;
 
-use super::{PathArc, PathDir, PathFile};
+use super::{PathArc, PathDir, PathFile, Result};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
@@ -26,25 +25,24 @@ impl PathAbs {
     ///
     /// # Examples
     /// ```rust
-    /// # extern crate path_abs;
     /// use path_abs::PathAbs;
     ///
-    /// # fn main() {
-    /// let lib = PathAbs::new("src/lib.rs").unwrap();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathAbs::new("src/lib.rs")?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathAbs> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<PathAbs> {
         let arc = PathArc::new(path);
         arc.canonicalize()
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
-    pub fn into_file(self) -> io::Result<PathFile> {
+    pub fn into_file(self) -> Result<PathFile> {
         PathFile::from_abs(self)
     }
 
     /// Resolve the `PathAbs` as a `PathDir`. Return an error if it is not a directory.
-    pub fn into_dir(self) -> io::Result<PathDir> {
+    pub fn into_dir(self) -> Result<PathDir> {
         PathDir::from_abs(self)
     }
 
@@ -58,17 +56,22 @@ impl PathAbs {
     /// # extern crate path_abs;
     /// use path_abs::{PathDir, PathFile};
     ///
-    /// # fn main() {
-    /// let lib = PathFile::new("src/lib.rs").unwrap();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathFile::new("src/lib.rs")?;
     /// let src = lib.parent_dir().unwrap();
-    /// assert_eq!(PathDir::new("src").unwrap(), src);
-    /// # }
+    /// assert_eq!(PathDir::new("src")?, src);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
             Some(p) => Some(PathDir(PathAbs(PathArc::new(p)))),
             None => None,
         }
+    }
+
+    /// Return a reference to a basic `std::path::Path`
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
     }
 
     /// For constructing mocked paths during tests. This is effectively the same as a `PathBuf`.
@@ -81,9 +84,9 @@ impl PathAbs {
     /// # extern crate path_abs;
     /// use path_abs::PathAbs;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// // this file exist
-    /// let lib = PathAbs::new("src/lib.rs").unwrap();
+    /// let lib = PathAbs::new("src/lib.rs")?;
     ///
     /// let lib_mocked = PathAbs::mock("src/lib.rs");
     ///
@@ -96,7 +99,7 @@ impl PathAbs {
     /// // this file doesn't exist at all
     /// let dne = PathAbs::mock("src/dne.rs");
     /// assert!(!dne.exists());
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
         PathAbs(PathArc::new(fake_path))

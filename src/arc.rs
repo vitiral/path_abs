@@ -8,7 +8,6 @@
 //! `PathArc`: Atomically reference counted path with better errors.
 
 use std::convert::AsRef;
-use std::io;
 use std::fmt;
 use std::fs;
 use std::ops::Deref;
@@ -16,6 +15,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::ffi::OsStr;
 
+use super::{Error, Result};
 use abs::PathAbs;
 use dir::{ListDir, PathDir};
 
@@ -36,10 +36,10 @@ impl PathArc {
     /// # extern crate path_abs;
     /// use path_abs::PathArc;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let path = PathArc::new("some/path");
     /// let path2 = path.clone(); // cloning is cheap
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> PathArc {
         PathArc::from(path.as_ref().to_path_buf())
@@ -83,13 +83,10 @@ impl PathArc {
     /// messages which include the action and the path
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.Path.html#method.metadata
-    pub fn metadata(&self) -> io::Result<fs::Metadata> {
-        self.0.metadata().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when getting metadata of {}", err, self.display()),
-            )
-        })
+    pub fn metadata(&self) -> Result<fs::Metadata> {
+        self.0
+            .metadata()
+            .map_err(|err| Error::new(err, "getting metadata of", self.clone()))
     }
 
     /// Queries the metadata about a file without following symlinks.
@@ -98,17 +95,10 @@ impl PathArc {
     /// messages which include the action and the path
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.Path.html#method.symlink_metadata
-    pub fn symlink_metadata(&self) -> io::Result<fs::Metadata> {
-        self.0.symlink_metadata().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!(
-                    "{} when getting symlink_metadata of {}",
-                    err,
-                    self.display()
-                ),
-            )
-        })
+    pub fn symlink_metadata(&self) -> Result<fs::Metadata> {
+        self.0
+            .symlink_metadata()
+            .map_err(|err| Error::new(err, "getting symlink_metadata of", self.clone()))
     }
 
     /// Returns the canonical form of the path with all intermediate components normalized and
@@ -121,13 +111,10 @@ impl PathArc {
     /// - It has error messages which include the action and the path
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.Path.html#method.canonicalize
-    pub fn canonicalize(&self) -> io::Result<PathAbs> {
-        let abs = self.0.canonicalize().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} canonicalizing {}", err, self.display()),
-            )
-        })?;
+    pub fn canonicalize(&self) -> Result<PathAbs> {
+        let abs = self.0
+            .canonicalize()
+            .map_err(|err| Error::new(err, "canonicalizing", self.clone()))?;
 
         Ok(PathAbs(PathArc::from(abs)))
     }
@@ -139,13 +126,10 @@ impl PathArc {
     /// - It has error messages which include the action and the path
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.Path.html#method.read_link
-    pub fn read_link(&self) -> io::Result<PathArc> {
-        let path = self.0.read_link().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} reading link {}", err, self.display()),
-            )
-        })?;
+    pub fn read_link(&self) -> Result<PathArc> {
+        let path = self.0
+            .read_link()
+            .map_err(|err| Error::new(err, "reading link", self.clone()))?;
 
         Ok(PathArc::from(path))
     }
@@ -156,9 +140,14 @@ impl PathArc {
     /// than [std::path::Path::read_dir][0].
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.Path.html#method.read_dir
-    pub fn read_dir(&self) -> io::Result<ListDir> {
+    pub fn read_dir(&self) -> Result<ListDir> {
         let dir = PathDir::new(self)?;
         dir.list()
+    }
+
+    /// Return a reference to a basic `std::path::Path`
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
     }
 }
 
@@ -208,10 +197,10 @@ impl Into<PathBuf> for PathArc {
     /// use path_abs::PathArc;
     /// use std::path::PathBuf;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let base = PathArc::new("base");
     /// let foo: PathBuf = base.join("foo.txt").into();
-    /// }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     fn into(self) -> PathBuf {
         match Arc::try_unwrap(self.0) {

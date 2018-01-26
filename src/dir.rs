@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
+use super::{Error, Result};
 use super::{PathAbs, PathArc, PathType};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -29,11 +30,11 @@ impl PathDir {
     /// # extern crate path_abs;
     /// use path_abs::PathDir;
     ///
-    /// # fn main() {
-    /// let src = PathDir::new("src").unwrap();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src = PathDir::new("src")?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         let abs = PathAbs::new(path)?;
         PathDir::from_abs(abs)
     }
@@ -53,18 +54,19 @@ impl PathDir {
     /// # extern crate path_abs;
     /// use path_abs::{PathAbs, PathDir};
     ///
-    /// # fn main() {
-    /// let src_abs = PathAbs::new("src").unwrap();
-    /// let src_dir = PathDir::from_abs(src_abs).unwrap();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src_abs = PathAbs::new("src")?;
+    /// let src_dir = PathDir::from_abs(src_abs)?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn from_abs(abs: PathAbs) -> io::Result<PathDir> {
+    pub fn from_abs(abs: PathAbs) -> Result<PathDir> {
         if abs.is_dir() {
             Ok(PathDir(abs))
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is not a directory", abs.display()),
+            Err(Error::new(
+                io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir"),
+                "resolving",
+                abs.into(),
             ))
         }
     }
@@ -77,27 +79,22 @@ impl PathDir {
     /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// let dir = PathDir::create(example).unwrap();
+    /// let dir = PathDir::create(example)?;
     ///
     /// // It can be done twice with no effect.
-    /// let _ = PathDir::create(example).unwrap();
-    /// # }
+    /// let _ = PathDir::create(example)?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => {
-                    return Err(io::Error::new(
-                        err.kind(),
-                        format!("{} when creating {}", err, path.as_ref().display()),
-                    ))
-                }
+                _ => return Err(Error::new(err, "creating", PathArc::new(path))),
             }
         }
         PathDir::new(path)
@@ -112,24 +109,20 @@ impl PathDir {
     /// # extern crate tempdir;
     /// use path_abs::PathDir;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example/long/path";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// let path = PathDir::create_all(example).unwrap();
+    /// let path = PathDir::create_all(example)?;
     ///
     /// // It can be done twice with no effect.
-    /// let _ = PathDir::create_all(example).unwrap();
-    /// # }
+    /// let _ = PathDir::create_all(example)?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn create_all<P: AsRef<Path>>(path: P) -> io::Result<PathDir> {
-        fs::create_dir_all(&path).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when creating-all {}", err, path.as_ref().display()),
-            )
-        })?;
+    pub fn create_all<P: AsRef<Path>>(path: P) -> Result<PathDir> {
+        fs::create_dir_all(&path)
+            .map_err(|err| Error::new(err, "creating-all", PathArc::new(&path)))?;
         PathDir::new(path)
     }
 
@@ -140,13 +133,13 @@ impl PathDir {
     /// # extern crate path_abs;
     /// use path_abs::{PathDir, PathFile};
     ///
-    /// # fn main() {
-    /// let src = PathDir::new("src").unwrap();
-    /// let lib = src.join_abs("lib.rs").unwrap().unwrap_file();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src = PathDir::new("src")?;
+    /// let lib = src.join_abs("lib.rs")?.unwrap_file();
     /// assert!(lib.is_file());
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> io::Result<PathType> {
+    pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> Result<PathType> {
         let joined = self.join(path.as_ref());
         PathType::new(joined)
     }
@@ -164,18 +157,18 @@ impl PathDir {
     /// use std::collections::HashSet;
     /// use path_abs::{PathDir, PathFile, PathType};
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join("example");
     ///
-    /// let example_dir = PathDir::create(example).unwrap();
-    /// let foo_dir = PathDir::create(example_dir.join("foo")).unwrap();
-    /// let bar_file = PathFile::create(example_dir.join("bar.txt")).unwrap();
+    /// let example_dir = PathDir::create(example)?;
+    /// let foo_dir = PathDir::create(example_dir.join("foo"))?;
+    /// let bar_file = PathFile::create(example_dir.join("bar.txt"))?;
     ///
     /// let mut result = HashSet::new();
-    /// for p in example_dir.list().unwrap() {
-    ///     result.insert(p.unwrap());
+    /// for p in example_dir.list()? {
+    ///     result.insert(p?);
     /// }
     ///
     /// let mut expected = HashSet::new();
@@ -183,14 +176,10 @@ impl PathDir {
     /// expected.insert(PathType::File(bar_file));
     ///
     /// assert_eq!(expected, result);
-    /// # }
-    pub fn list(&self) -> io::Result<ListDir> {
-        let fsread = fs::read_dir(self).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when reading dir {}", err, self.display()),
-            )
-        })?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    pub fn list(&self) -> Result<ListDir> {
+        let fsread =
+            fs::read_dir(self).map_err(|err| Error::new(err, "reading dir", self.clone().into()))?;
         Ok(ListDir {
             dir: self.clone(),
             fsread: fsread,
@@ -206,28 +195,23 @@ impl PathDir {
     /// use std::path::Path;
     /// use path_abs::PathDir;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = Path::new("example/long/path");
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// let dir = PathDir::create_all(example).unwrap();
+    /// let dir = PathDir::create_all(example)?;
     /// let parent = dir.parent_dir().unwrap();
     ///
     /// assert!(example.exists());
-    /// dir.remove().unwrap();
+    /// dir.remove()?;
     /// // assert!(dir.exists());  <--- COMPILE ERROR
     /// assert!(!example.exists());
-    /// parent.remove().unwrap();
-    /// # }
+    /// parent.remove()?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn remove(self) -> io::Result<()> {
-        fs::remove_dir(&self).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when removing {}", err, self.display()),
-            )
-        })
+    pub fn remove(self) -> Result<()> {
+        fs::remove_dir(&self).map_err(|err| Error::new(err, "removing", self.into()))
     }
 
     /// Remove (delete) the directory, after recursively removing its contents. Use carefully!
@@ -239,26 +223,26 @@ impl PathDir {
     /// use std::path::Path;
     /// use path_abs::PathDir;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = Path::new("example/long/path");
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// let dir = PathDir::create_all(example).unwrap();
+    /// let dir = PathDir::create_all(example)?;
     /// let parent = dir.parent_dir().unwrap();
     ///
     /// assert!(example.exists());
-    /// parent.remove_all().unwrap();
+    /// parent.remove_all()?;
     /// assert!(!example.exists());
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn remove_all(self) -> io::Result<()> {
-        fs::remove_dir_all(&self).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when removing all {}", err, self.display()),
-            )
-        })
+    pub fn remove_all(self) -> Result<()> {
+        fs::remove_dir_all(&self).map_err(|err| Error::new(err, "removing-all", self.into()))
+    }
+
+    /// Return a reference to a basic `std::path::Path`
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
     }
 
     /// Create a mock dir type. *For use in tests only*.
@@ -278,15 +262,16 @@ pub struct ListDir {
 }
 
 impl ::std::iter::Iterator for ListDir {
-    type Item = io::Result<PathType>;
-    fn next(&mut self) -> Option<io::Result<PathType>> {
+    type Item = Result<PathType>;
+    fn next(&mut self) -> Option<Result<PathType>> {
         let entry = match self.fsread.next() {
             Some(r) => match r {
                 Ok(e) => e,
                 Err(err) => {
-                    return Some(Err(io::Error::new(
-                        err.kind(),
-                        format!("{} when iterating over {}", err, self.dir.display()),
+                    return Some(Err(Error::new(
+                        err,
+                        "iterating over",
+                        self.dir.clone().into(),
                     )))
                 }
             },
@@ -337,10 +322,10 @@ impl Into<PathAbs> for PathDir {
     /// use std::path::PathBuf;
     /// use path_abs::{PathDir, PathAbs};
     ///
-    /// # fn main() {
-    /// let dir = PathDir::new("src").unwrap();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let dir = PathDir::new("src")?;
     /// let abs: PathAbs = dir.into();
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     fn into(self) -> PathAbs {
         self.0
@@ -363,10 +348,10 @@ impl Into<PathBuf> for PathDir {
     /// use path_abs::PathDir;
     /// use std::path::PathBuf;
     ///
-    /// # fn main() {
-    /// let dir = PathDir::new("src").unwrap();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let dir = PathDir::new("src")?;
     /// let buf: PathBuf = dir.into();
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     fn into(self) -> PathBuf {
         let arc: PathArc = self.into();

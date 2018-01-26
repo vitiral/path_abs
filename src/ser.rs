@@ -39,7 +39,7 @@ impl PathArc {
 
     #[cfg(unix)]
     pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
-        let raw_path = stfu8::decode_u8(&s)?;
+        let raw_path = stfu8::decode_u8(s)?;
         let os_str = OsStr::from_bytes(&raw_path);
         Ok(PathArc::new(os_str))
     }

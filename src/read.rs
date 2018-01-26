@@ -13,7 +13,9 @@ use std::fmt;
 use std::io;
 use std::path::Path;
 use std::ops::Deref;
+use std::io::Read;
 
+use super::{Error, Result};
 use super::PathFile;
 use super::open::FileOpen;
 
@@ -27,36 +29,46 @@ use super::open::FileOpen;
 /// use std::io::Read;
 /// use path_abs::{PathFile, FileRead};
 ///
-/// # fn main() {
+/// # fn try_main() -> ::std::io::Result<()> {
 /// let example = "example.txt";
-/// # let tmp = tempdir::TempDir::new("ex").unwrap();
+/// # let tmp = tempdir::TempDir::new("ex")?;
 /// # let example = &tmp.path().join(example);
-/// let file = PathFile::create(example).unwrap();
+/// let file = PathFile::create(example)?;
 ///
 /// let expected = "foo\nbar";
-/// file.write_str(expected).unwrap();
+/// file.write_str(expected)?;
 ///
-/// let mut read = FileRead::read(example).unwrap();
+/// let mut read = FileRead::read(example)?;
 /// let mut s = String::new();
-/// read.read_to_string(&mut s).unwrap();
+/// read.read_to_string(&mut s)?;
 /// assert_eq!(expected, s);
-/// # }
+/// # Ok(()) } fn main() { try_main().unwrap() }
 /// ```
 pub struct FileRead(pub(crate) FileOpen);
 
 impl FileRead {
     /// Open the file as read-only.
-    pub fn read<P: AsRef<Path>>(path: P) -> io::Result<FileRead> {
+    pub fn read<P: AsRef<Path>>(path: P) -> Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
         Ok(FileRead(FileOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already canonicalized.
-    pub(crate) fn read_path(path: PathFile) -> io::Result<FileRead> {
+    pub(crate) fn read_path(path: PathFile) -> Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
         Ok(FileRead(FileOpen::open_path(path, options)?))
+    }
+
+    /// Read what remains of the file to a `String`.
+    pub fn read_string(&mut self) -> Result<String> {
+        let mut s = String::new();
+        self.0
+            .file
+            .read_to_string(&mut s)
+            .map_err(|err| Error::new(err, "reading", self.path.clone().into()))?;
+        Ok(s)
     }
 }
 

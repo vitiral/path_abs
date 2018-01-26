@@ -13,25 +13,25 @@ license = "MIT OR Apache-2.0"
 name = "path_abs"
 readme = "README.md"
 repository = "https://github.com/vitiral/path_abs"
-version = "0.3.3"
+version = "0.3.4"
 
 [dependencies.serde]
 optional = true
-version = ">=1.0"
+version = "^1.0"
 
 [dependencies.serde_derive]
 optional = true
-version = ">=1.0"
+version = "^1.0"
 
 [dependencies.stfu8]
 optional = true
-version = ">=0.2.1"
+version = "^0.2.1"
 
 [dev-dependencies]
-pretty_assertions = ">=0.4"
-regex = ">=0.2"
-serde_json = ">=1.0"
-tempdir = ">=0.3"
+pretty_assertions = "^0.4"
+regex = "^0.2"
+serde_json = "^1.0"
+tempdir = "^0.3"
 
 [features]
 default = ["serialize"]

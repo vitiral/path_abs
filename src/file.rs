@@ -8,11 +8,11 @@
 use std::fs;
 use std::fmt;
 use std::io;
-use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::ops::Deref;
 use std::convert::AsRef;
 
+use super::{Error, Result};
 use super::{FileEdit, FileRead, FileWrite, PathAbs, PathArc};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -29,11 +29,11 @@ impl PathFile {
     /// # extern crate path_abs;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
-    /// let lib = PathFile::new("src/lib.rs").unwrap();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathFile::new("src/lib.rs")?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathFile> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<PathFile> {
         let abs = PathAbs::new(path)?;
         PathFile::from_abs(abs)
     }
@@ -53,18 +53,19 @@ impl PathFile {
     /// # extern crate path_abs;
     /// use path_abs::{PathAbs, PathFile};
     ///
-    /// # fn main() {
-    /// let lib_abs = PathAbs::new("src/lib.rs").unwrap();
-    /// let lib_file = PathFile::from_abs(lib_abs).unwrap();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib_abs = PathAbs::new("src/lib.rs")?;
+    /// let lib_file = PathFile::from_abs(lib_abs)?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn from_abs(abs: PathAbs) -> io::Result<PathFile> {
+    pub fn from_abs(abs: PathAbs) -> Result<PathFile> {
         if abs.is_file() {
             Ok(PathFile(abs))
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is not a file", abs.display()),
+            Err(Error::new(
+                io::Error::new(io::ErrorKind::InvalidInput, "path is not a file"),
+                "resolving",
+                abs.into(),
             ))
         }
     }
@@ -77,31 +78,26 @@ impl PathFile {
     /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// // It can be done twice with no effect.
-    /// let _ = PathFile::create(example).unwrap();
-    /// # }
+    /// let _ = PathFile::create(example)?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<PathFile> {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<PathFile> {
         fs::OpenOptions::new()
             .write(true)
             .create(true)
             .open(&path)
-            .map_err(|err| {
-                io::Error::new(
-                    err.kind(),
-                    format!("{} when opening {}", err, path.as_ref().display()),
-                )
-            })?;
+            .map_err(|err| Error::new(err, "opening", PathArc::new(&path)))?;
         PathFile::new(path)
     }
 
@@ -113,25 +109,20 @@ impl PathFile {
     /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar";
-    /// file.write_str(expected).unwrap();
-    /// assert_eq!(expected, file.read_string().unwrap());
-    /// # }
+    /// file.write_str(expected)?;
+    /// assert_eq!(expected, file.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn read_string(&self) -> io::Result<String> {
+    pub fn read_string(&self) -> Result<String> {
         let mut f = self.read()?;
-        let mut out = {
-            let meta = f.metadata()?;
-            String::with_capacity(meta.len() as usize)
-        };
-        f.read_to_string(&mut out)?;
-        Ok(out)
+        f.read_string()
     }
 
     /// Write the `str` to a file, truncating it first if it exists and creating it otherwise.
@@ -142,18 +133,18 @@ impl PathFile {
     /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar";
-    /// file.write_str(expected).unwrap();
-    /// assert_eq!(expected, file.read_string().unwrap());
-    /// # }
+    /// file.write_str(expected)?;
+    /// assert_eq!(expected, file.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn write_str(&self, s: &str) -> io::Result<()> {
+    pub fn write_str(&self, s: &str) -> Result<()> {
         let mut options = fs::OpenOptions::new();
         options.create(true);
         options.truncate(true);
@@ -161,7 +152,7 @@ impl PathFile {
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())?;
+        f.write_str(s)?;
         f.flush()
     }
 
@@ -173,24 +164,24 @@ impl PathFile {
     /// # extern crate tempdir;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar\nbaz";
-    /// file.append_str("foo\nbar").unwrap();
-    /// file.append_str("\nbaz").unwrap();
-    /// assert_eq!(expected, file.read_string().unwrap());
-    /// # }
+    /// file.append_str("foo\nbar")?;
+    /// file.append_str("\nbaz")?;
+    /// assert_eq!(expected, file.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn append_str(&self, s: &str) -> io::Result<()> {
+    pub fn append_str(&self, s: &str) -> Result<()> {
         let mut f = self.append()?;
         if s.is_empty() {
             return Ok(());
         }
-        f.write_all(s.as_bytes())?;
+        f.write_str(s)?;
         f.flush()
     }
 
@@ -203,22 +194,22 @@ impl PathFile {
     /// use std::io::Read;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar";
-    /// file.write_str(expected).unwrap();
+    /// file.write_str(expected)?;
     ///
-    /// let mut read = file.read().unwrap();
+    /// let mut read = file.read()?;
     /// let mut s = String::new();
-    /// read.read_to_string(&mut s).unwrap();
+    /// read.read_to_string(&mut s)?;
     /// assert_eq!(expected, s);
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn read(&self) -> io::Result<FileRead> {
+    pub fn read(&self) -> Result<FileRead> {
         FileRead::read_path(self.clone())
     }
 
@@ -231,22 +222,22 @@ impl PathFile {
     /// use std::io::Write;
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar\n";
-    /// file.write_str("foo\n").unwrap();
+    /// file.write_str("foo\n")?;
     ///
-    /// let mut append = file.append().unwrap();
-    /// append.write_all(b"bar\n").unwrap();
+    /// let mut append = file.append()?;
+    /// append.write_all(b"bar\n")?;
     /// append.flush();
-    /// assert_eq!(expected, file.read_string().unwrap());
-    /// # }
+    /// assert_eq!(expected, file.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn append(&self) -> io::Result<FileWrite> {
+    pub fn append(&self) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
         FileWrite::open_path(self.clone(), options)
@@ -261,24 +252,24 @@ impl PathFile {
     /// use std::io::{Read, Seek, Write, SeekFrom};
     /// use path_abs::PathFile;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     ///
     /// let expected = "foo\nbar";
     ///
-    /// let mut edit = file.edit().unwrap();
+    /// let mut edit = file.edit()?;
     /// let mut s = String::new();
     ///
-    /// edit.write_all(expected.as_bytes()).unwrap();
-    /// edit.seek(SeekFrom::Start(0)).unwrap();
-    /// edit.read_to_string(&mut s).unwrap();
+    /// edit.write_all(expected.as_bytes())?;
+    /// edit.seek(SeekFrom::Start(0))?;
+    /// edit.read_to_string(&mut s)?;
     /// assert_eq!(expected, s);
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn edit(&self) -> io::Result<FileEdit> {
+    pub fn edit(&self) -> Result<FileEdit> {
         FileEdit::open_path(self.clone(), fs::OpenOptions::new())
     }
 
@@ -291,26 +282,26 @@ impl PathFile {
     /// use path_abs::PathFile;
     /// use std::path::Path;
     ///
-    /// # fn main() {
+    /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex").unwrap();
+    /// # let tmp = tempdir::TempDir::new("ex")?;
     /// # let example = &tmp.path().join(example);
-    /// let file = PathFile::create(example).unwrap();
+    /// let file = PathFile::create(example)?;
     /// assert!(file.exists());
-    /// file.remove().unwrap();
+    /// file.remove()?;
     ///
     /// // file.exists() <--- COMPILER ERROR, `file` was consumed
     ///
     /// assert!(!Path::new(example).exists());
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn remove(self) -> io::Result<()> {
-        fs::remove_file(&self).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when removing {}", err, self.display()),
-            )
-        })
+    pub fn remove(self) -> Result<()> {
+        fs::remove_file(&self).map_err(|err| Error::new(err, "removing", self.into()))
+    }
+
+    /// Return a reference to a basic `std::path::Path`
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
     }
 
     /// Create a mock file type. *For use in tests only*.
@@ -362,10 +353,10 @@ impl Into<PathAbs> for PathFile {
     /// use std::path::PathBuf;
     /// use path_abs::{PathFile, PathAbs};
     ///
-    /// # fn main() {
-    /// let file = PathFile::new("src/lib.rs").unwrap();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let file = PathFile::new("src/lib.rs")?;
     /// let abs: PathAbs = file.clone().into();
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     fn into(self) -> PathAbs {
         self.0
@@ -388,10 +379,10 @@ impl Into<PathBuf> for PathFile {
     /// use path_abs::PathFile;
     /// use std::path::PathBuf;
     ///
-    /// # fn main() {
-    /// let file = PathFile::new("src/lib.rs").unwrap();
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let file = PathFile::new("src/lib.rs")?;
     /// let buf: PathBuf = file.into();
-    /// # }
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     fn into(self) -> PathBuf {
         let arc: PathArc = self.into();

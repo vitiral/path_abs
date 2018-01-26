@@ -13,7 +13,9 @@ use std::fmt;
 use std::io;
 use std::path::Path;
 use std::ops::Deref;
+use std::io::Write;
 
+use super::{Error, Result};
 use super::PathFile;
 use super::open::FileOpen;
 
@@ -27,25 +29,25 @@ use super::open::FileOpen;
 /// use std::io::Write;
 /// use path_abs::{PathFile, FileWrite};
 ///
-/// # fn main() {
+/// # fn try_main() -> ::std::io::Result<()> {
 /// let example = "example.txt";
-/// # let tmp = tempdir::TempDir::new("ex").unwrap();
+/// # let tmp = tempdir::TempDir::new("ex")?;
 /// # let example = &tmp.path().join(example);
 ///
 /// let expected = "foo\nbar";
-/// let mut write = FileWrite::create(example).unwrap();
-/// write.write_all(expected.as_bytes()).unwrap();
+/// let mut write = FileWrite::create(example)?;
+/// write.write_all(expected.as_bytes())?;
 /// write.flush();
 ///
-/// let file = PathFile::new(example).unwrap();
-/// assert_eq!(expected, file.read_string().unwrap());
-/// # }
+/// let file = PathFile::new(example)?;
+/// assert_eq!(expected, file.read_string()?);
+/// # Ok(()) } fn main() { try_main().unwrap() }
 /// ```
 pub struct FileWrite(pub(crate) FileOpen);
 
 impl FileWrite {
     /// Open the file with the given `OpenOptions` but always sets `write` to true.
-    pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> io::Result<FileWrite> {
+    pub fn open<P: AsRef<Path>>(path: P, mut options: fs::OpenOptions) -> Result<FileWrite> {
         options.write(true);
         Ok(FileWrite(FileOpen::open(path, options)?))
     }
@@ -54,14 +56,14 @@ impl FileWrite {
     pub(crate) fn open_path(
         path_file: PathFile,
         mut options: fs::OpenOptions,
-    ) -> io::Result<FileWrite> {
+    ) -> Result<FileWrite> {
         options.write(true);
         Ok(FileWrite(FileOpen::open_path(path_file, options)?))
     }
 
     /// Open the file in write-only mode, truncating it first if it exists and creating it
     /// otherwise.
-    pub fn create<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.truncate(true);
         options.create(true);
@@ -69,7 +71,7 @@ impl FileWrite {
     }
 
     /// Open the file for appending, creating it if it doesn't exist.
-    pub fn append<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn append<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
         options.create(true);
@@ -78,7 +80,7 @@ impl FileWrite {
 
     /// Open the file for editing (reading and writing) but do not create it
     /// if it doesn't exist.
-    pub fn edit<P: AsRef<Path>>(path: P) -> io::Result<FileWrite> {
+    pub fn edit<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
         FileWrite::open(path, options)
@@ -93,13 +95,10 @@ impl FileWrite {
     /// messages which include the action and the path.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_all
-    pub fn sync_all(&self) -> io::Result<()> {
-        self.file.sync_all().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when syncing {}", err, self.path.display()),
-            )
-        })
+    pub fn sync_all(&self) -> Result<()> {
+        self.file
+            .sync_all()
+            .map_err(|err| Error::new(err, "syncing", self.path.clone().into()))
     }
 
     /// This function is similar to sync_all, except that it may not synchronize file metadata to
@@ -109,13 +108,10 @@ impl FileWrite {
     /// messages which include the action and the path.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_data
-    pub fn sync_data(&self) -> io::Result<()> {
-        self.file.sync_data().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when syncing data for {}", err, self.path.display()),
-            )
-        })
+    pub fn sync_data(&self) -> Result<()> {
+        self.file
+            .sync_data()
+            .map_err(|err| Error::new(err, "syncing data for", self.path.clone().into()))
     }
 
     /// Truncates or extends the underlying file, updating the size of this file to become size.
@@ -126,13 +122,10 @@ impl FileWrite {
     /// - It takes `&mut self` instead of `&self`.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
-    pub fn set_len(&mut self, size: u64) -> io::Result<()> {
-        self.file.set_len(size).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when setting len for {}", err, self.path.display()),
-            )
-        })
+    pub fn set_len(&mut self, size: u64) -> Result<()> {
+        self.file
+            .set_len(size)
+            .map_err(|err| Error::new(err, "setting len for", self.path.clone().into()))
     }
 
     /// Changes the permissions on the underlying file.
@@ -143,17 +136,27 @@ impl FileWrite {
     /// - It takes `&mut self` instead of `&self`.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_permissions
-    pub fn set_permissions(&mut self, perm: fs::Permissions) -> io::Result<()> {
-        self.file.set_permissions(perm).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!(
-                    "{} when setting permisions for {}",
-                    err,
-                    self.path.display()
-                ),
-            )
-        })
+    pub fn set_permissions(&mut self, perm: fs::Permissions) -> Result<()> {
+        self.file
+            .set_permissions(perm)
+            .map_err(|err| Error::new(err, "setting permisions for", self.path.clone().into()))
+    }
+
+    /// Shortcut to `self.write_all(s.as_bytes())` with slightly
+    /// improved error message.
+    pub fn write_str(&mut self, s: &str) -> Result<()> {
+        self.0
+            .file
+            .write_all(s.as_bytes())
+            .map_err(|err| Error::new(err, "writing", self.path.clone().into()))
+    }
+
+    /// `std::io::File::flush` buth with the new error type.
+    pub fn flush(&mut self) -> Result<()> {
+        self.0
+            .file
+            .flush()
+            .map_err(|err| Error::new(err, "flushing", self.path.clone().into()))
     }
 }
 

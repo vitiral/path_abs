@@ -9,11 +9,11 @@
 
 use std::fs;
 use std::fmt;
-use std::io;
 use std::path::Path;
 use std::convert::AsRef;
 
-use super::PathFile;
+use super::{Error, Result};
+use super::{PathArc, PathFile};
 
 /// **INTERNAL TYPE: do not use directly.**
 ///
@@ -25,13 +25,10 @@ pub struct FileOpen {
 
 impl FileOpen {
     /// Open the file with the given `OpenOptions`.
-    pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> io::Result<FileOpen> {
-        let file = options.open(&path).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when opening {}", err, path.as_ref().display()),
-            )
-        })?;
+    pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> Result<FileOpen> {
+        let file = options
+            .open(&path)
+            .map_err(|err| Error::new(err, "opening", PathArc::new(&path)))?;
 
         let path = PathFile::new(path)?;
         Ok(FileOpen {
@@ -44,13 +41,10 @@ impl FileOpen {
     ///
     /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).
-    pub fn open_path(path: PathFile, options: fs::OpenOptions) -> io::Result<FileOpen> {
-        let file = options.open(&path).map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when opening {}", err, path.display()),
-            )
-        })?;
+    pub fn open_path(path: PathFile, options: fs::OpenOptions) -> Result<FileOpen> {
+        let file = options
+            .open(&path)
+            .map_err(|err| Error::new(err, "opening", path.clone().into()))?;
 
         Ok(FileOpen {
             path: path,
@@ -69,13 +63,10 @@ impl FileOpen {
     /// messages which include the action and the path.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.metadata
-    pub fn metadata(&self) -> io::Result<fs::Metadata> {
-        self.file.metadata().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when getting metadata for {}", err, self.path.display()),
-            )
-        })
+    pub fn metadata(&self) -> Result<fs::Metadata> {
+        self.file
+            .metadata()
+            .map_err(|err| Error::new(err, "getting metadata for", self.path.clone().into()))
     }
 
     /// Creates a new independently owned handle to the underlying file.
@@ -84,13 +75,10 @@ impl FileOpen {
     /// messages which include the action and the path and it returns a `FileOpen` object.
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.try_clone
-    pub fn try_clone(&self) -> io::Result<FileOpen> {
-        let file = self.file.try_clone().map_err(|err| {
-            io::Error::new(
-                err.kind(),
-                format!("{} when cloning {}", err, self.path.display()),
-            )
-        })?;
+    pub fn try_clone(&self) -> Result<FileOpen> {
+        let file = self.file
+            .try_clone()
+            .map_err(|err| Error::new(err, "cloning file handle for", self.path.clone().into()))?;
         Ok(FileOpen {
             file: file,
             path: self.path.clone(),

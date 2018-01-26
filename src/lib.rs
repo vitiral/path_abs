@@ -126,16 +126,16 @@
 //!     FileEdit,  // Open read/write file handler
 //! };
 //!
-//! # fn main() {
+//! # fn try_main() -> ::std::io::Result<()> {
 //! let example = Path::new("example");
-//! # let tmp = tempdir::TempDir::new("ex").unwrap();
+//! # let tmp = tempdir::TempDir::new("ex")?;
 //! # let example = &tmp.path().join(example);
 //!
 //! // Create your paths
-//! let project = PathDir::create_all(example).unwrap();
-//! let src = PathDir::create(project.join("src")).unwrap();
-//! let lib = PathFile::create(src.join("lib.rs")).unwrap();
-//! let cargo = PathFile::create(project.join("Cargo.toml")).unwrap();
+//! let project = PathDir::create_all(example)?;
+//! let src = PathDir::create(project.join("src"))?;
+//! let lib = PathFile::create(src.join("lib.rs"))?;
+//! let cargo = PathFile::create(project.join("Cargo.toml"))?;
 //!
 //! // Write the templates
 //! lib.write_str(r#"
@@ -145,7 +145,7 @@
 //!     fn it_works() {
 //!         assert_eq!(2 + 2, 4);
 //!     }
-//! }"#).unwrap();
+//! }"#)?;
 //!
 //! cargo.write_str(r#"
 //! [package]
@@ -154,12 +154,12 @@
 //! authors = ["Garrett Berg <vitiral@gmail.com>"]
 //!
 //! [dependencies]
-//! "#).unwrap();
+//! "#)?;
 //!
 //! // Put our result into a HashMap so we can assert it
 //! let mut result = HashSet::new();
-//! for p in project.list().unwrap() {
-//!     result.insert(p.unwrap());
+//! for p in project.list()? {
+//!     result.insert(p?);
 //! }
 //!
 //! // Create our expected value
@@ -174,15 +174,15 @@
 //!
 //! // Creating a generic path
 //! let lib_path = example.join("src").join("lib.rs");
-//! let abs = PathAbs::new(&lib_path).unwrap();
+//! let abs = PathAbs::new(&lib_path)?;
 //!
 //! // Or a path with a known type
 //! let file = PathType::new(&lib_path)
-//!     .unwrap()
+//!     ?
 //!     .unwrap_file();
 //!
 //! // Or use `PathAbs::into_file`
-//! let file2 = abs.clone().into_file().unwrap();
+//! let file2 = abs.clone().into_file()?;
 //!
 //! assert!(abs.is_file());
 //! assert!(file.is_file());
@@ -192,14 +192,14 @@
 //! // Opening a File
 //!
 //! // open read-only using the PathFile method
-//! let read = file.read().unwrap();
+//! let read = file.read()?;
 //!
 //! // Or use the type directly: open for appending
-//! let write = FileWrite::append(&file).unwrap();
+//! let write = FileWrite::append(&file)?;
 //!
 //! // Open for read/write editing.
-//! let edit = file.edit().unwrap();
-//! # }
+//! let edit = file.edit()?;
+//! # Ok(()) } fn main() { try_main().unwrap() }
 //! ```
 
 #[cfg(feature = "serialize")]
@@ -219,6 +219,11 @@ extern crate regex;
 extern crate serde_json;
 #[cfg(test)]
 extern crate tempdir;
+
+use std::io;
+use std::path::Path;
+use std::error;
+use std::fmt;
 
 mod abs;
 mod arc;
@@ -241,6 +246,103 @@ pub use ty::PathType;
 pub use edit::FileEdit;
 pub use write::FileWrite;
 pub use read::FileRead;
+
+pub type Result<T> = ::std::result::Result<T, Error>;
+
+/// An error produced by performing an filesystem operation on a `Path`.
+///
+/// This error type is a light wrapper around [`std::io::Error`]. In particular, it adds the
+/// following information:
+///
+/// - The action being performed when the error occured
+/// - The path associated with the IO error.
+///
+/// To maintain good ergonomics, this type has a `impl From<Error> for std::io::Error` defined so
+/// that you may use an [`io::Result`] with methods in this crate if you don't care about accessing
+/// the underlying error data in a structured form (the pretty format will be preserved however).
+///
+/// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
+/// [`io::Result`]: https://doc.rust-lang.org/stable/std/io/type.Result.html
+///
+/// # Examples
+/// ```rust
+/// use path_abs::Error as PathError;
+/// use path_abs::PathFile;
+///
+/// /// main function, note that you can use `io::Error`
+/// fn try_main() -> Result<(), ::std::io::Error> {
+///     let lib = PathFile::new("src/lib.rs")?;
+///     Ok(())
+/// }
+///
+/// ```
+pub struct Error {
+    io_err: io::Error,
+    action: &'static str,
+    path: PathArc,
+}
+
+impl Error {
+    /// Create a new error when the path and action are known.
+    pub fn new(io_err: io::Error, action: &'static str, path: PathArc) -> Error {
+        Error {
+            io_err: io_err,
+            action: action,
+            path: path,
+        }
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Error<{}>", self)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} when {} {}",
+            self.io_err,
+            self.action,
+            self.path.display()
+        )
+    }
+}
+
+impl Error {
+    /// Returns the path associated with this error.
+    pub fn path(&self) -> &Path {
+        self.path.as_ref()
+    }
+
+    /// Returns the `std::io::Error` associated with this errors.
+    pub fn io_error(&self) -> &io::Error {
+        &self.io_err
+    }
+
+    /// Returns the action being performed when this error occured.
+    pub fn action(&self) -> &str {
+        self.action
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        self.io_err.description()
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        Some(&self.io_err)
+    }
+}
+
+impl From<Error> for io::Error {
+    fn from(err: Error) -> io::Error {
+        io::Error::new(err.io_err.kind(), err.to_string())
+    }
+}
 
 #[cfg(test)]
 mod tests {

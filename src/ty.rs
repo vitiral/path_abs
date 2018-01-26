@@ -9,6 +9,7 @@ use std::convert::AsRef;
 use std::io;
 use std::path::Path;
 
+use super::{Error, Result};
 use super::PathAbs;
 use file::PathFile;
 use dir::PathDir;
@@ -40,27 +41,21 @@ impl PathType {
     /// # extern crate path_abs;
     /// use path_abs::PathType;
     ///
-    /// # fn main() {
-    /// let src = PathType::new("src").unwrap();
-    /// # }
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<PathType> {
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src = PathType::new("src")?;
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<PathType> {
         let abs = PathAbs::new(&path)?;
-        let ty = abs.metadata()
-            .map_err(|err| {
-                io::Error::new(
-                    err.kind(),
-                    format!("{} when getting metadata for {}", err, abs.display()),
-                )
-            })?
-            .file_type();
+        let ty = abs.metadata()?.file_type();
         if ty.is_file() {
             Ok(PathType::File(PathFile(abs)))
         } else if ty.is_dir() {
             Ok(PathType::Dir(PathDir(abs)))
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is not a dir or a file", path.as_ref().display()),
+            Err(Error::new(
+                io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir or a file"),
+                "resolving",
+                abs.into(),
             ))
         }
     }
@@ -72,9 +67,9 @@ impl PathType {
     /// # extern crate path_abs;
     /// use path_abs::PathType;
     ///
-    /// # fn main() {
-    /// let lib = PathType::new("src/lib.rs").unwrap().unwrap_file();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathType::new("src/lib.rs")?.unwrap_file();
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     pub fn unwrap_file(self) -> PathFile {
         match self {
             PathType::File(f) => f,
@@ -91,9 +86,9 @@ impl PathType {
     /// # extern crate path_abs;
     /// use path_abs::PathType;
     ///
-    /// # fn main() {
-    /// let src = PathType::new("src").unwrap().unwrap_dir();
-    /// # }
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src = PathType::new("src")?.unwrap_dir();
+    /// # Ok(()) } fn main() { try_main().unwrap() }
     pub fn unwrap_dir(self) -> PathDir {
         match self {
             PathType::Dir(d) => d,
