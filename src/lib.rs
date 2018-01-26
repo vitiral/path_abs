@@ -341,7 +341,7 @@ impl error::Error for Error {
 
 impl From<Error> for io::Error {
     fn from(err: Error) -> io::Error {
-        io::Error::new(err.io_err.kind(), err.to_string())
+        io::Error::new(err.io_err.kind(), err)
     }
 }
 
