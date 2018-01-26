@@ -202,6 +202,7 @@
 //! # Ok(()) } fn main() { try_main().unwrap() }
 //! ```
 
+extern crate std_prelude;
 #[cfg(feature = "serialize")]
 extern crate serde;
 #[macro_use]
@@ -221,9 +222,9 @@ extern crate serde_json;
 extern crate tempdir;
 
 use std::io;
-use std::path::Path;
 use std::error;
 use std::fmt;
+use std_prelude::*;
 
 mod abs;
 mod arc;

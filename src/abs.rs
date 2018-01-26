@@ -8,9 +8,7 @@
 //! The absolute path type, the root type for _most_ `Path*` types in this module
 //! (except for `PathArc`).
 use std::fmt;
-use std::ops::Deref;
-use std::convert::AsRef;
-use std::path::Path;
+use std_prelude::*;
 
 use super::{PathArc, PathDir, PathFile, Result};
 

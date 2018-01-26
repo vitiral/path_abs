@@ -5,9 +5,8 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-use std::convert::AsRef;
 use std::io;
-use std::path::Path;
+use std_prelude::*;
 
 use super::{Error, Result};
 use super::PathAbs;

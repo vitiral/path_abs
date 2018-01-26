@@ -9,8 +9,7 @@
 
 use std::fs;
 use std::fmt;
-use std::path::Path;
-use std::convert::AsRef;
+use std_prelude::*;
 
 use super::{Error, Result};
 use super::{PathArc, PathFile};

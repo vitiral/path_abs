@@ -7,13 +7,10 @@
  */
 //! Open file paths that are read-only.
 
-use std::convert::AsRef;
 use std::fs;
 use std::fmt;
 use std::io;
-use std::path::Path;
-use std::ops::Deref;
-use std::io::Read;
+use std_prelude::*;
 
 use super::{Error, Result};
 use super::PathFile;

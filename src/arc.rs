@@ -7,13 +7,10 @@
  */
 //! `PathArc`: Atomically reference counted path with better errors.
 
-use std::convert::AsRef;
 use std::fmt;
 use std::fs;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::ffi::OsStr;
+use std_prelude::*;
 
 use super::{Error, Result};
 use abs::PathAbs;
