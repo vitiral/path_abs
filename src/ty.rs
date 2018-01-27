@@ -49,7 +49,7 @@ impl PathType {
     }
 
     /// Consume the `PathAbs` returning the `PathType`.
-    fn from_abs(abs: PathAbs) -> Result<PathType> {
+    pub fn from_abs(abs: PathAbs) -> Result<PathType> {
         let ty = abs.metadata()?.file_type();
         if ty.is_file() {
             Ok(PathType::File(PathFile(abs)))
