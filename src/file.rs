@@ -58,7 +58,7 @@ impl PathFile {
     /// ```
     pub fn from_abs(abs: PathAbs) -> Result<PathFile> {
         if abs.is_file() {
-            Ok(PathFile(abs))
+            Ok(PathFile::from_abs_unchecked(abs))
         } else {
             Err(Error::new(
                 io::Error::new(io::ErrorKind::InvalidInput, "path is not a file"),
@@ -66,6 +66,15 @@ impl PathFile {
                 abs.into(),
             ))
         }
+    }
+
+    #[inline(always)]
+    /// Do the conversion _without checking_.
+    ///
+    /// This is typically used by external libraries when the type is already known
+    /// through some other means (to avoid a syscall).
+    pub fn from_abs_unchecked(abs: PathAbs) -> PathFile {
+        PathFile(abs)
     }
 
     /// Instantiate a new `PathFile`, creating an empty file if it doesn't exist.

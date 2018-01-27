@@ -59,7 +59,7 @@ impl PathDir {
     /// ```
     pub fn from_abs(abs: PathAbs) -> Result<PathDir> {
         if abs.is_dir() {
-            Ok(PathDir(abs))
+            Ok(PathDir::from_abs_unchecked(abs))
         } else {
             Err(Error::new(
                 io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir"),
@@ -67,6 +67,15 @@ impl PathDir {
                 abs.into(),
             ))
         }
+    }
+
+    #[inline(always)]
+    /// Do the conversion _without checking_.
+    ///
+    /// This is typically used by external libraries when the type is already known
+    /// through some other means (to avoid a syscall).
+    pub fn from_abs_unchecked(abs: PathAbs) -> PathDir {
+        PathDir(abs)
     }
 
     /// Instantiate a new `PathDir` to a directory, creating the directory if it doesn't exist.
