@@ -116,6 +116,18 @@ impl AsRef<PathArc> for PathAbs {
     }
 }
 
+impl AsRef<Path> for PathAbs {
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
+}
+
+impl AsRef<PathBuf> for PathAbs {
+    fn as_ref(&self) -> &PathBuf {
+        self.0.as_ref()
+    }
+}
+
 impl Deref for PathAbs {
     type Target = PathArc;
 

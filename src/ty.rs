@@ -5,8 +5,6 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-use std::fs;
-use std::fmt;
 use std::io;
 use std_prelude::*;
 

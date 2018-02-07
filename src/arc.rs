@@ -154,15 +154,15 @@ impl fmt::Debug for PathArc {
     }
 }
 
-impl AsRef<PathBuf> for PathArc {
-    fn as_ref(&self) -> &PathBuf {
-        &self.0
-    }
-}
-
 impl AsRef<Path> for PathArc {
     fn as_ref(&self) -> &Path {
         self.0.as_path()
+    }
+}
+
+impl AsRef<PathBuf> for PathArc {
+    fn as_ref(&self) -> &PathBuf {
+        &self.0
     }
 }
 
