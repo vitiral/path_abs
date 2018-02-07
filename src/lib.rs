@@ -202,12 +202,12 @@
 //! # Ok(()) } fn main() { try_main().unwrap() }
 //! ```
 
-extern crate std_prelude;
 #[cfg(feature = "serialize")]
 extern crate serde;
 #[macro_use]
 #[cfg(feature = "serialize")]
 extern crate serde_derive;
+extern crate std_prelude;
 #[cfg(feature = "serialize")]
 extern crate stfu8;
 
@@ -369,6 +369,7 @@ mod tests {
     }
 
     #[test]
+
     /// Tests to make sure the error messages look like we expect.
     fn sanity_errors() {
         let tmp_dir = TempDir::new("example").expect("create temp dir");

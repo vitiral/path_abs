@@ -5,13 +5,13 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+use std::fs;
+use std::fmt;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::PathAbs;
-use file::PathFile;
-use dir::PathDir;
+use super::{PathAbs, PathArc, PathDir, PathFile};
 
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serialize", serde(tag = "type", content = "path", rename_all = "lowercase"))]
@@ -133,5 +133,87 @@ impl PathType {
     /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
     pub fn mock_dir<P: AsRef<Path>>(path: P) -> PathType {
         PathType::Dir(PathDir::mock(path))
+    }
+}
+
+impl AsRef<PathAbs> for PathType {
+    fn as_ref(&self) -> &PathAbs {
+        match *self {
+            PathType::File(ref file) => file.as_ref(),
+            PathType::Dir(ref dir) => dir.as_ref(),
+        }
+    }
+}
+
+impl AsRef<Path> for PathType {
+    fn as_ref(&self) -> &Path {
+        let r: &PathAbs = self.as_ref();
+        r.as_ref()
+    }
+}
+
+impl AsRef<PathBuf> for PathType {
+    fn as_ref(&self) -> &PathBuf {
+        let r: &PathAbs = self.as_ref();
+        r.as_ref()
+    }
+}
+
+impl Deref for PathType {
+    type Target = PathAbs;
+
+    fn deref(&self) -> &PathAbs {
+        let r: &PathAbs = self.as_ref();
+        r
+    }
+}
+
+impl Into<PathAbs> for PathType {
+    /// Downgrades the `PathType` into a `PathAbs`
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use std::path::PathBuf;
+    /// use path_abs::{PathType, PathAbs};
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let ty = PathType::new("src/lib.rs")?;
+    /// let abs: PathAbs = ty.into();
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    fn into(self) -> PathAbs {
+        match self {
+            PathType::File(p) => p.into(),
+            PathType::Dir(p) => p.into(),
+        }
+    }
+}
+
+impl Into<PathArc> for PathType {
+    /// Downgrades the `PathType` into a `PathArc`
+    fn into(self) -> PathArc {
+        let abs: PathAbs = self.into();
+        abs.into()
+    }
+}
+
+impl Into<PathBuf> for PathType {
+    /// Downgrades the `PathType` into a `PathBuf`. Avoids a clone if this is the only reference.
+    ///
+    /// # Examples
+    /// ```
+    /// # extern crate path_abs;
+    /// use path_abs::PathType;
+    /// use std::path::PathBuf;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let ty = PathType::new("src/lib.rs")?;
+    /// let buf: PathBuf = ty.into();
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    fn into(self) -> PathBuf {
+        let arc: PathArc = self.into();
+        arc.into()
     }
 }
