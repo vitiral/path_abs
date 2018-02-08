@@ -138,7 +138,6 @@ impl Borrow<Path> for PathAbs {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl Borrow<PathBuf> for PathAbs {
@@ -157,7 +156,6 @@ impl<'a> Borrow<Path> for &'a PathAbs {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl<'a> Borrow<PathBuf> for &'a PathAbs {

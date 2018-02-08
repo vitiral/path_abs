@@ -280,6 +280,41 @@ impl PathFile {
         FileEdit::open_path(self.clone(), fs::OpenOptions::new())
     }
 
+    /// Copy the file to another location, including permission bits
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use path_abs::PathFile;
+    /// use std::path::Path;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let example = "example.txt";
+    /// let example_bk = "example.txt.bk";
+    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let example = &tmp.path().join(example);
+    /// # let example_bk = &tmp.path().join(example_bk);
+    /// let file = PathFile::create(example)?;
+    ///
+    /// let contents = "This is some contents";
+    /// file.write_str(contents);
+    /// let file_bk = file.copy(example_bk)?;
+    /// assert_eq!(contents, file.read_string()?);
+    /// assert_eq!(contents, file_bk.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn copy<P: AsRef<Path>>(&self, path: P) -> Result<PathFile> {
+        fs::copy(&self, &path).map_err(|err| {
+            Error::new(
+                err,
+                &format!("copying {} from ", path.as_ref().display()),
+                self.clone().into(),
+            )
+        })?;
+        Ok(PathFile::new(path)?)
+    }
+
     /// Remove (delete) the file from the filesystem, consuming self.
     ///
     /// # Examples
@@ -365,7 +400,6 @@ impl Borrow<Path> for PathFile {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl Borrow<PathBuf> for PathFile {
@@ -390,7 +424,6 @@ impl<'a> Borrow<Path> for &'a PathFile {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl<'a> Borrow<PathBuf> for &'a PathFile {

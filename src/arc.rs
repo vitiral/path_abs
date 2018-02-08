@@ -170,21 +170,18 @@ impl Borrow<Path> for PathArc {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl Borrow<PathBuf> for PathArc {
     fn borrow(&self) -> &PathBuf {
         self.as_ref()
     }
-
 }
 
 impl<'a> Borrow<Path> for &'a PathArc {
     fn borrow(&self) -> &Path {
         self.as_ref()
     }
-
 }
 
 impl<'a> Borrow<PathBuf> for &'a PathArc {
