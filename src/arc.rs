@@ -166,6 +166,20 @@ impl AsRef<PathBuf> for PathArc {
     }
 }
 
+impl Borrow<Path> for PathArc {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl Borrow<PathBuf> for PathArc {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+
+}
+
 impl Deref for PathArc {
     type Target = PathBuf;
 

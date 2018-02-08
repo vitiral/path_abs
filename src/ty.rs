@@ -143,6 +143,13 @@ impl AsRef<PathAbs> for PathType {
     }
 }
 
+impl AsRef<PathArc> for PathType {
+    fn as_ref(&self) -> &PathArc {
+        let r: &PathAbs = self.as_ref();
+        r.as_ref()
+    }
+}
+
 impl AsRef<Path> for PathType {
     fn as_ref(&self) -> &Path {
         let r: &PathAbs = self.as_ref();
@@ -163,6 +170,31 @@ impl Deref for PathType {
     fn deref(&self) -> &PathAbs {
         let r: &PathAbs = self.as_ref();
         r
+    }
+}
+
+impl Borrow<PathAbs> for PathType {
+    fn borrow(&self) -> &PathAbs {
+        self.as_ref()
+    }
+}
+
+impl Borrow<PathArc> for PathType {
+    fn borrow(&self) -> &PathArc {
+        self.as_ref()
+    }
+}
+
+impl Borrow<Path> for PathType {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl Borrow<PathBuf> for PathType {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
     }
 }
 

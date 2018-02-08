@@ -300,6 +300,12 @@ impl AsRef<PathAbs> for PathDir {
     }
 }
 
+impl AsRef<PathArc> for PathDir {
+    fn as_ref(&self) -> &PathArc {
+        self.0.as_ref()
+    }
+}
+
 impl AsRef<Path> for PathDir {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
@@ -309,6 +315,31 @@ impl AsRef<Path> for PathDir {
 impl AsRef<PathBuf> for PathDir {
     fn as_ref(&self) -> &PathBuf {
         self.0.as_ref()
+    }
+}
+
+impl Borrow<PathAbs> for PathDir {
+    fn borrow(&self) -> &PathAbs {
+        self.as_ref()
+    }
+}
+
+impl Borrow<PathArc> for PathDir {
+    fn borrow(&self) -> &PathArc {
+        self.as_ref()
+    }
+}
+
+impl Borrow<Path> for PathDir {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl Borrow<PathBuf> for PathDir {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
     }
 }
 
