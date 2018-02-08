@@ -308,11 +308,48 @@ impl PathFile {
         fs::copy(&self, &path).map_err(|err| {
             Error::new(
                 err,
-                &format!("copying {} from ", path.as_ref().display()),
+                &format!("copying {} from", path.as_ref().display()),
                 self.clone().into(),
             )
         })?;
         Ok(PathFile::new(path)?)
+    }
+
+    /// Rename a file, replacing the original file if `to` already exists.
+    ///
+    /// This will not work if the new name is on a different mount point.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use path_abs::PathFile;
+    /// use std::path::Path;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let example = "example.txt";
+    /// let example_bk = "example.txt.bk";
+    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let example = &tmp.path().join(example);
+    /// # let example_bk = &tmp.path().join(example_bk);
+    /// let file = PathFile::create(example)?;
+    ///
+    /// let contents = "This is some contents";
+    /// file.write_str(contents);
+    /// let file_bk = file.clone().rename(example_bk)?;
+    /// assert!(!file.exists());
+    /// assert_eq!(contents, file_bk.read_string()?);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn rename<P: AsRef<Path>>(self, to: P) -> Result<PathFile> {
+        fs::rename(&self, &to).map_err(|err| {
+            Error::new(
+                err,
+                &format!("renaming to {} from", to.as_ref().display()),
+                self.clone().into(),
+            )
+        })?;
+        Ok(PathFile::new(to)?)
     }
 
     /// Remove (delete) the file from the filesystem, consuming self.
