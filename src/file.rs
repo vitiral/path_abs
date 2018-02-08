@@ -374,6 +374,30 @@ impl Borrow<PathBuf> for PathFile {
     }
 }
 
+impl<'a> Borrow<PathAbs> for &'a PathFile {
+    fn borrow(&self) -> &PathAbs {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<PathArc> for &'a PathFile {
+    fn borrow(&self) -> &PathArc {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<Path> for &'a PathFile {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl<'a> Borrow<PathBuf> for &'a PathFile {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+}
 
 impl Deref for PathFile {
     type Target = PathAbs;

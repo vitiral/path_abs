@@ -343,6 +343,31 @@ impl Borrow<PathBuf> for PathDir {
     }
 }
 
+impl<'a> Borrow<PathAbs> for &'a PathDir {
+    fn borrow(&self) -> &PathAbs {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<PathArc> for &'a PathDir {
+    fn borrow(&self) -> &PathArc {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<Path> for &'a PathDir {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl<'a> Borrow<PathBuf> for &'a PathDir {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+}
+
 impl Deref for PathDir {
     type Target = PathAbs;
 

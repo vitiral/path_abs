@@ -198,6 +198,31 @@ impl Borrow<PathBuf> for PathType {
     }
 }
 
+impl<'a> Borrow<PathAbs> for &'a PathType {
+    fn borrow(&self) -> &PathAbs {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<PathArc> for &'a PathType {
+    fn borrow(&self) -> &PathArc {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<Path> for &'a PathType {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+
+}
+
+impl<'a> Borrow<PathBuf> for &'a PathType {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+}
+
 impl Into<PathAbs> for PathType {
     /// Downgrades the `PathType` into a `PathAbs`
     ///
