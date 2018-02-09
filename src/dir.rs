@@ -497,5 +497,5 @@ fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()>
 
 #[cfg(windows)]
 fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
-    std::os::windows::fs::symlink_dir(src, dst)
+    ::std::os::windows::fs::symlink_dir(src, dst)
 }
