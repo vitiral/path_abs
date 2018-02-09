@@ -247,6 +247,45 @@ impl PathDir {
         fs::remove_dir_all(&self).map_err(|err| Error::new(err, "removing-all", self.into()))
     }
 
+    /// Creates a new symbolic link on the filesystem to the dst.
+    ///
+    /// This handles platform specific behavior correctly.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use path_abs::{PathDir, PathFile};
+    /// use std::path::Path;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let example = "example";
+    /// let example_sym = "example_sym";
+    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let example = &tmp.path().join(example);
+    /// # let example_sym = &tmp.path().join(example_sym);
+    /// let dir = PathDir::create(example)?;
+    /// let file = PathFile::create(dir.join("example.txt"))?;
+    ///
+    /// dir.symlink(example_sym)?;
+    /// let dir_sym = PathDir::new(example_sym)?;
+    ///
+    /// // They are canonicalized to the same file.
+    /// assert_eq!(dir, dir_sym);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
+        symlink_dir(&self, &dst)
+            .map_err(|err| {
+            Error::new(
+                err,
+                &format!("linking to {} from", dst.as_ref().display()),
+                self.clone().into(),
+            )
+            })
+    }
+
     /// Return a reference to a basic `std::path::Path`
     pub fn as_path(&self) -> &Path {
         self.as_ref()
@@ -449,4 +488,14 @@ mod tests {
         let _: PathAbs = foo_dir.into();
         let _: PathAbs = bar_file.into();
     }
+}
+
+#[cfg(unix)]
+fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
+    ::std::os::unix::fs::symlink(src, dst)
+}
+
+#[cfg(windows)]
+fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
+    std::os::windows::fs::symlink_dir(src, dst)
 }

@@ -283,6 +283,7 @@ impl PathFile {
     /// Copy the file to another location, including permission bits
     ///
     /// # Examples
+    ///
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
@@ -352,9 +353,50 @@ impl PathFile {
         Ok(PathFile::new(to)?)
     }
 
+    /// Creates a new symbolic link on the filesystem to the dst.
+    ///
+    /// This handles platform specific behavior correctly.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # extern crate path_abs;
+    /// # extern crate tempdir;
+    /// use path_abs::PathFile;
+    /// use std::path::Path;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let example = "example.txt";
+    /// let example_sym = "example.txt.sym";
+    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let example = &tmp.path().join(example);
+    /// # let example_sym = &tmp.path().join(example_sym);
+    /// let file = PathFile::create(example)?;
+    ///
+    /// let contents = "This is some contents";
+    /// file.write_str(contents);
+    /// file.symlink(example_sym)?;
+    /// let file_sym = PathFile::new(example_sym)?;
+    ///
+    /// // They are canonicalized to the same file.
+    /// assert_eq!(file, file_sym);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
+        symlink_file(&self, &dst)
+            .map_err(|err| {
+            Error::new(
+                err,
+                &format!("linking to {} from", dst.as_ref().display()),
+                self.clone().into(),
+            )
+            })
+    }
+
     /// Remove (delete) the file from the filesystem, consuming self.
     ///
     /// # Examples
+    ///
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
@@ -521,4 +563,14 @@ impl Into<PathBuf> for PathFile {
         let arc: PathArc = self.into();
         arc.into()
     }
+}
+
+#[cfg(unix)]
+fn symlink_file<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
+    ::std::os::unix::fs::symlink(src, dst)
+}
+
+#[cfg(windows)]
+fn symlink_file<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
+    std::os::windows::fs::symlink_file(src, dst)
 }
