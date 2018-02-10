@@ -37,6 +37,25 @@ impl PathDir {
         PathDir::from_abs(abs)
     }
 
+    /// Returns the current working directory from the `env` as a `PathDir`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathDir;
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let cwd = PathDir::current_dir()?;
+    /// # let env_cwd = ::std::fs::canonicalize(::std::env::current_dir()?)?;
+    /// # let cwd_ref: &::std::path::PathBuf = cwd.as_ref();
+    /// # assert_eq!(cwd_ref, &env_cwd);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn current_dir() -> Result<PathDir> {
+        let dir = ::std::env::current_dir()
+            .map_err(|err| Error::new(err, "getting current_dir", PathArc::new("$CWD")))?;
+        PathDir::new(dir)
+    }
+
     /// Consume the `PathAbs` validating that the path is a directory and returning `PathDir`. The
     /// directory must exist or `io::Error` will be returned.
     ///
@@ -68,6 +87,7 @@ impl PathDir {
             ))
         }
     }
+
 
     #[inline(always)]
     /// Do the conversion _without checking_.
