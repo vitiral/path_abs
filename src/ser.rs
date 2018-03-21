@@ -25,6 +25,16 @@ macro_rules! map_err { ($res: expr) => {{
 }}}
 
 impl PathArc {
+    /// Convert the `PathArc` into an STFU8 `String`.
+    pub fn to_string(&self) -> String {
+        self.to_stfu8()
+    }
+
+    /// Convert STFU8 `str` to a `PathArc`.
+    pub fn from_str(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        PathArc::from_stfu8(s)
+    }
+
     #[cfg(unix)]
     pub(crate) fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
