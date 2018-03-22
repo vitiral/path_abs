@@ -20,9 +20,11 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use super::{PathAbs, PathArc, PathDir, PathFile};
 
-macro_rules! map_err { ($res: expr) => {{
-    $res.map_err(|err| serde::de::Error::custom(&err.to_string()))
-}}}
+macro_rules! map_err {
+    ($res: expr) => {{
+        $res.map_err(|err| serde::de::Error::custom(&err.to_string()))
+    }};
+}
 
 impl PathArc {
     /// Convert the `PathArc` into an STFU8 `String`.

@@ -383,14 +383,13 @@ impl PathFile {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
-        symlink_file(&self, &dst)
-            .map_err(|err| {
+        symlink_file(&self, &dst).map_err(|err| {
             Error::new(
                 err,
                 &format!("linking to {} from", dst.as_ref().display()),
                 self.clone().into(),
             )
-            })
+        })
     }
 
     /// Remove (delete) the file from the filesystem, consuming self.
@@ -572,5 +571,5 @@ fn symlink_file<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()
 
 #[cfg(windows)]
 fn symlink_file<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
-   :: std::os::windows::fs::symlink_file(src, dst)
+    ::std::os::windows::fs::symlink_file(src, dst)
 }

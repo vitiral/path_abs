@@ -354,15 +354,18 @@ mod tests {
 
     use super::*;
 
-    macro_rules! assert_match { ($re: expr, $err: expr) => {{
-        let re = Regex::new(&$re).unwrap();
-        let err = $err.to_string();
-        assert!(
-            re.is_match(&err), "\nGot Err         : {:?}\nMatching against: {:?}",
-            err.to_string(),
-            $re
-        );
-    }}}
+    macro_rules! assert_match {
+        ($re: expr, $err: expr) => {{
+            let re = Regex::new(&$re).unwrap();
+            let err = $err.to_string();
+            assert!(
+                re.is_match(&err),
+                "\nGot Err         : {:?}\nMatching against: {:?}",
+                err.to_string(),
+                $re
+            );
+        }};
+    }
 
     fn escape<P: AsRef<Path>>(path: P) -> String {
         regex::escape(&format!("{}", path.as_ref().display()))

@@ -88,7 +88,6 @@ impl PathDir {
         }
     }
 
-
     #[inline(always)]
     /// Do the conversion _without checking_.
     ///
@@ -296,14 +295,13 @@ impl PathDir {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
-        symlink_dir(&self, &dst)
-            .map_err(|err| {
+        symlink_dir(&self, &dst).map_err(|err| {
             Error::new(
                 err,
                 &format!("linking to {} from", dst.as_ref().display()),
                 self.clone().into(),
             )
-            })
+        })
     }
 
     /// Return a reference to a basic `std::path::Path`
