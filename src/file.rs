@@ -41,11 +41,6 @@ impl PathFile {
     ///
     /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
-    /// > already a fully qualified path.
-    ///
-    /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-    ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
@@ -375,21 +370,25 @@ impl PathFile {
     ///
     /// let contents = "This is some contents";
     /// file.write_str(contents);
-    /// file.symlink(example_sym)?;
-    /// let file_sym = PathFile::new(example_sym)?;
+    /// let file_sym = file.symlink(example_sym)?;
     ///
-    /// // They are canonicalized to the same file.
-    /// assert_eq!(file, file_sym);
+    /// // They have a different "absolute path"
+    /// assert_ne!(file, file_sym);
+    ///
+    /// // But they can be canonicalized to the same file.
+    /// let file_can = file_sym.canonicalize()?;
+    /// assert_eq!(file, file_can);
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
+    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<PathFile> {
         symlink_file(&self, &dst).map_err(|err| {
             Error::new(
                 err,
-                &format!("linking to {} from", dst.as_ref().display()),
+                &format!("linking from {} to", dst.as_ref().display()),
                 self.clone().into(),
             )
-        })
+        })?;
+        PathFile::new(dst)
     }
 
     /// Remove (delete) the file from the filesystem, consuming self.
@@ -422,6 +421,16 @@ impl PathFile {
     /// Return a reference to a basic `std::path::Path`
     pub fn as_path(&self) -> &Path {
         self.as_ref()
+    }
+
+    /// Returns the canonical form of the path with all intermediate components normalized and
+    /// symbolic links resolved.
+    ///
+    /// See [`PathAbs::canonicalize`]
+    ///
+    /// [`PathAbs::canonicalize`]: struct.PathAbs.html#method.canonicalize
+    pub fn canonicalize(&self) -> Result<PathFile> {
+        Ok(PathFile(self.0.canonicalize()?))
     }
 
     /// Create a mock file type. *For use in tests only*.

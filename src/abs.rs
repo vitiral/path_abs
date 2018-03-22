@@ -13,7 +13,7 @@ use std_prelude::*;
 use super::{PathArc, PathDir, PathFile, Result};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
-/// An absolute ([canonicalized][1]) path that is guaranteed (when created) to exist.
+/// An absolute (not _necessarily_ [canonicalized][1]) path that may or may not exist.
 ///
 /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
 pub struct PathAbs(pub(crate) PathArc);
@@ -31,7 +31,7 @@ impl PathAbs {
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathAbs> {
         let arc = PathArc::new(path);
-        arc.canonicalize()
+        arc.absolute()
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.

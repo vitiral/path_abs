@@ -12,9 +12,10 @@
 //!
 //! This includes:
 //!
+//! - Cleaner _absolute_ paths (which is distinct from canonicalized paths).
 //! - Improved error messages, see the **Better Errors** section.
-//! - Improved type safety. The types specify that a file _once_ existed and was _once_ a certain
-//!   type. Obviously a file/directory can be deleted/changed by another process.
+//! - Improved type safety. The types specify that a file/dir _once_ existed and was _once_ a certain
+//!   type. Obviously a file/dir can be deleted/changed by another process.
 //! - More stringent mutability requirements. See the **Differing Method Signatures** section.
 //! - Cheap cloning: all path types are `Arc`, which a cheap operation compared to filesystem
 //!   operations and allows more flexibility and ergonomics in the library for relatively low cost.
@@ -22,8 +23,8 @@
 //! ## Better Errors
 //!
 //! All errors include the **path** and **action** which caused the error, as well as the unaltered
-//! `std::io::Error` message. Errors are `std::io::Error`, giving almost complete compatibility
-//! with existing code.
+//! `std::io::Error` message. Errors are convertable into `std::io::Error`, giving almost complete
+//! compatibility with existing code.
 //!
 //! ### `set_len` (i.e. truncate a file):
 //!
@@ -57,12 +58,12 @@
 //! - [`PathArc`](struct.PathArc.html): a reference counted `PathBuf` with methods reimplemented
 //!   with better error messages. Use this for a generic serializable path that may or may
 //!   not exist.
-//! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (canonicalized) path that is
-//!   guaranteed (on initialization) to exist.
-//! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed to be a file, with
-//!   associated methods.
-//! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed to be a directory, with
-//!   associated methods.
+//! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (_not necessarily_
+//!   canonicalized) path that is not necessarily guaranteed to exist.
+//! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed (at instantiation) to
+//!   exist and be a file, with associated methods.
+//! - [`PathDir`](struct.PathDir.html): a `PathAbs` that is guaranteed (at instantiation) to exist
+//!   and be a directory, with associated methods.
 //! - [`PathType`](struct.PathType.html): an enum containing either a PathFile or a PathDir.
 //!   Returned by [`PathDir::list`][dir_list]
 //!
@@ -71,7 +72,7 @@
 //! that crate for more details on how the resulting encoding can be edited (by hand) even in the
 //! case of what *would be* ill-formed UTF-16.
 //!
-//! [dir_list]: struct.PathDir.html#method.list)
+//! [dir_list]: struct.PathDir.html#method.list
 //!
 //!
 //! ## Exported File Types
@@ -117,7 +118,7 @@
 //! use std::path::Path;
 //! use std::collections::HashSet;
 //! use path_abs::{
-//!     PathAbs,   // absolute path that exists
+//!     PathAbs,   // absolute path
 //!     PathDir,   // absolute path to a directory
 //!     PathFile,  // absolute path to a file
 //!     PathType,  // enum of Dir or File
@@ -239,7 +240,7 @@ mod write;
 mod read;
 
 pub use abs::PathAbs;
-pub use arc::PathArc;
+pub use arc::{PathArc, current_dir};
 pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
 pub use ty::PathType;
@@ -372,7 +373,6 @@ mod tests {
     }
 
     #[test]
-
     /// Tests to make sure the error messages look like we expect.
     fn sanity_errors() {
         let tmp_dir = TempDir::new("example").expect("create temp dir");

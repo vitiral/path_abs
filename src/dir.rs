@@ -61,11 +61,6 @@ impl PathDir {
     ///
     /// If the path is actually a file returns `io::ErrorKind::InvalidInput`.
     ///
-    /// > This does not call [`Path::cannonicalize()`][1], instead trusting that the input is
-    /// > already a fully qualified path.
-    ///
-    /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-    ///
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
@@ -171,10 +166,6 @@ impl PathDir {
     }
 
     /// List the contents of the directory, returning an iterator of `PathType`s.
-    ///
-    /// > **Warning**: because `PathAbs` is the canonicalized path, symlinks are always resolved.
-    /// > This means that if the directory contains a symlink you may get a path from a completely
-    /// > _different directory_.
     ///
     /// # Examples
     /// ```rust
@@ -287,26 +278,41 @@ impl PathDir {
     /// let dir = PathDir::create(example)?;
     /// let file = PathFile::create(dir.join("example.txt"))?;
     ///
-    /// dir.symlink(example_sym)?;
-    /// let dir_sym = PathDir::new(example_sym)?;
+    /// let dir_sym = dir.symlink(example_sym)?;
     ///
-    /// // They are canonicalized to the same file.
-    /// assert_eq!(dir, dir_sym);
+    /// // They have a different "absolute path"
+    /// assert_ne!(dir, dir_sym);
+    ///
+    /// // But they can be canonicalized to the same file.
+    /// let dir_can = dir_sym.canonicalize()?;
+    /// assert_eq!(dir, dir_can);
+    ///
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<()> {
+    pub fn symlink<P: AsRef<Path>>(&self, dst: P) -> Result<PathDir> {
         symlink_dir(&self, &dst).map_err(|err| {
             Error::new(
                 err,
-                &format!("linking to {} from", dst.as_ref().display()),
+                &format!("linking from {} to", dst.as_ref().display()),
                 self.clone().into(),
             )
-        })
+        })?;
+        PathDir::new(dst)
     }
 
     /// Return a reference to a basic `std::path::Path`
     pub fn as_path(&self) -> &Path {
         self.as_ref()
+    }
+
+    /// Returns the canonical form of the path with all intermediate components normalized and
+    /// symbolic links resolved.
+    ///
+    /// See [`PathAbs::canonicalize`]
+    ///
+    /// [`PathAbs::canonicalize`]: struct.PathAbs.html#method.canonicalize
+    pub fn canonicalize(&self) -> Result<PathDir> {
+        Ok(PathDir(self.0.canonicalize()?))
     }
 
     /// Create a mock dir type. *For use in tests only*.
