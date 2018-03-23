@@ -51,7 +51,7 @@ impl FileRead {
         Ok(FileRead(FileOpen::open(path, options)?))
     }
 
-    /// Shortcut to open the file if the path is already canonicalized.
+    /// Shortcut to open the file if the path is already absolute.
     pub(crate) fn read_path(path: PathFile) -> Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);

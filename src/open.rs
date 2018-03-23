@@ -36,7 +36,7 @@ impl FileOpen {
         })
     }
 
-    /// Shortcut to open the file if the path is already canonicalized.
+    /// Shortcut to open the file if the path is already absolute.
     ///
     /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).

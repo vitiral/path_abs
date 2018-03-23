@@ -5,10 +5,9 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-use std::io;
 use std_prelude::*;
 
-use super::{Error, Result};
+use super::Result;
 use super::{PathAbs, PathArc, PathDir, PathFile};
 
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
@@ -20,8 +19,7 @@ use super::{PathAbs, PathArc, PathDir, PathFile};
 /// - The items returned from `PathDir::list`
 /// - Serializing paths of different types.
 ///
-/// > Note: symlinks are not supported because they are
-/// > *impossible* for canonicalized paths.
+/// Note that for symlinks, this returns the underlying file type.
 pub enum PathType {
     File(PathFile),
     Dir(PathDir),
@@ -54,11 +52,7 @@ impl PathType {
         } else if ty.is_dir() {
             Ok(PathType::Dir(PathDir(abs)))
         } else {
-            Err(Error::new(
-                io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir or a file"),
-                "resolving",
-                abs.into(),
-            ))
+            unreachable!("rust docs: The fs::metadata function follows symbolic links")
         }
     }
 

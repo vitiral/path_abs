@@ -52,7 +52,7 @@ impl FileEdit {
         Ok(FileEdit(FileOpen::open(path, options)?))
     }
 
-    /// Shortcut to open the file if the path is already canonicalized.
+    /// Shortcut to open the file if the path is already absolute.
     pub(crate) fn open_path(path: PathFile, mut options: fs::OpenOptions) -> Result<FileEdit> {
         options.write(true);
         options.read(true);

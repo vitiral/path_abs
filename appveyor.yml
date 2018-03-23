@@ -42,6 +42,7 @@ branches:
 # channels to enable unstable features when building for nightly. Or you could add additional
 # matrix entries to test different combinations of features.
 environment:
+  RUST_BACKTRACE: 1
   matrix:
 
 ### MSVC Toolchains ###
@@ -127,4 +128,4 @@ build: false
 #directly or perform other testing commands. Rust will automatically be placed in the PATH
 # environment variable.
 test_script:
-- cargo test --verbose --all %cargoflags% -- --nocapture
+- cargo test --verbose --all --no-fail-fast %cargoflags% -- --nocapture

@@ -49,7 +49,7 @@ impl FileWrite {
         Ok(FileWrite(FileOpen::open(path, options)?))
     }
 
-    /// Shortcut to open the file if the path is already canonicalized.
+    /// Shortcut to open the file if the path is already absolute.
     pub(crate) fn open_path(
         path_file: PathFile,
         mut options: fs::OpenOptions,
