@@ -73,15 +73,16 @@ fn hostname() -> String {
     out
 }
 
-fn coms() -> String {
-    let coms = Command::new("mode")
-        .output()
-        .expect("could not get `mode` comports")
-        .stdout;
-    let out = ::std::str::from_utf8(&coms).unwrap().trim().to_string();
-    println!("### COMS:\n{}\n###", out);
-    out
-}
+// TODO: doesn't work, can't get coms
+// fn coms() -> String {
+//     let coms = Command::new("mode")
+//         .output()
+//         .expect("could not get `mode` comports")
+//         .stdout;
+//     let out = ::std::str::from_utf8(&coms).unwrap().trim().to_string();
+//     println!("### COMS:\n{}\n###", out);
+//     out
+// }
 
 #[cfg_attr(windows, test)]
 fn canonicalize_root() {
@@ -93,8 +94,12 @@ fn canonicalize_verbatim() {
     // CURRENT DIR: C:\projects\path-abs
     println!("CURRENT DIR: {}", ::std::env::current_dir().unwrap().display());
 
+    let verbatim_root = Path::new(r"\\?\");
+    let list: Vec<_> = ::std::fs::read_dir(verbatim_root).unwrap().collect();
+    println!("LIST VERBATIM: {:?}", list);
+
     // TODO:
-    // EXPECTED ERR Canonicalizing "\\\\?\\project" => The system cannot find the file specified.
+    // EXPECTED ERR Canonicalizing "\\\\?\\projects" => The system cannot find the file specified.
     // (os error 2)
     expect_err!(r"\\?\projects");
 }
@@ -110,7 +115,7 @@ fn canonicalize_verbatim_unc() {
     // ###
 
     let _ = share(); // FIXME: just printing for now
-    let p = format!(r"\\?\{}\C$", hostname());
+    let p = format!(r"\\?\UNC\{}\C$", hostname());
     // TODO: current result:
     // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
     // specified. (os error 3)
@@ -126,22 +131,20 @@ fn canonicalize_verbatim_disk() {
     expect_err!(r"\\?\C:")
 }
 
-#[cfg_attr(windows, test)]
-fn canonicalize_device_ns() {
-    // TODO: EXPECTED ERR Canonicalizing "\\\\.\\com1" => The system cannot find the file
-    // specified. (os error 2)
-    let _ = coms();
-    expect_err!(r"\\.\COM1")
-}
+// TODO: can't list COMS
+// #[cfg_attr(windows, test)]
+// fn canonicalize_device_ns() {
+//     // TODO: EXPECTED ERR Canonicalizing "\\\\.\\com1" => The system cannot find the file
+//     // specified. (os error 2)
+//     let _ = coms();
+//     expect_err!(r"\\.\COM1")
+// }
 
 #[cfg_attr(windows, test)]
 fn canonicalize_unc() {
-    // TODO:
-    // canonicalize_unc' panicked at 'called `Result::unwrap()` on an `Err` value: Error { repr:
-    // Os { code: 67, message: "The network name cannot be found." }
     let h = hostname();
     let unc = format!(r"\\{}\C$", h);
-    let verbatim = format!(r"\\?\{}\C$", h);
+    let verbatim = format!(r"\\?\UNC\{}\C$", h);
     let result = Path::new(&unc).canonicalize().unwrap();
     assert_eq!(Path::new(&verbatim), result);
 }
