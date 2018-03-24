@@ -399,7 +399,8 @@ fn handle_prefix(
                     //     }
                     // }
 
-                    let root = PathArc::new(r"\").canonicalize()?;
+                    // let root = PathArc::new(r"\").canonicalize()?;
+                    let root = PathArc::new(r"\").canonicalize().expect("FIXME: win \\");
                     stack.extend(root.components().map(to_os));
                 } else {
                     // Always push the "root" component.

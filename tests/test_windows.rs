@@ -116,10 +116,7 @@ fn canonicalize_verbatim_unc() {
 
     let _ = share(); // FIXME: just printing for now
     let p = format!(r"\\?\UNC\{}\C$", hostname());
-    // TODO: current result:
-    // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
-    // specified. (os error 3)
-    expect_err!(&p);
+    expect_path!(&p, &p);
 }
 
 #[cfg_attr(windows, test)]
