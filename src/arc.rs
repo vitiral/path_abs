@@ -345,7 +345,7 @@ fn handle_prefix(
 
         match component {
             Component::CurDir => {
-                assert_eq!(recursing, false);
+                assert!(!recursing);
 
                 // ignore
                 continue;
@@ -368,41 +368,43 @@ fn handle_prefix(
             }
             Component::RootDir => {
                 if cfg!(windows) {
-                    // we were called by something that got cwd... so it better not start with `\`.
-                    assert!(!recursing);
+                    // assert!(!recursing); // windows should not give `\` in CWD
+                    // // https://stackoverflow.com/questions/151860
+                    // // > In Windows [root is] relative to what drive your current working
+                    // // > directory is at the time.
+                    // //
+                    // // So, we need to push the "drive" first.
 
-                    // https://stackoverflow.com/questions/151860
-                    // > In Windows [root is] relative to what drive your current working
-                    // > directory is at the time.
-                    //
-                    // So, we need to push the "drive" first.
+                    // let cwd = current_dir(resolving)?;
+                    // handle_prefix(resolving, stack, &mut cwd.components(), true)?;
+                    // {
+                    //     // Double check that we aren't being dumb. `current_dir`
+                    //     // should have always started with some kind of prefix.
 
-                    let cwd = current_dir(resolving)?;
-                    handle_prefix(resolving, stack, &mut cwd.components(), true)?;
-                    {
-                        // Double check that we aren't being dumb. `current_dir`
-                        // should have always started with some kind of prefix.
+                    //     // TODO: not sure why, but this assertion actually can fail and
+                    //     // does in the tests.
+                    //     // assert_eq!(1, stack.len(), "{:?}", stack);
 
-                        // TODO: not sure why, but this assertion actually can fail and
-                        // does in the tests.
-                        // assert_eq!(1, stack.len(), "{:?}", stack);
+                    //     let first = Path::new(&stack[0]).components().next().unwrap();
+                    //     if let Component::Prefix(prefix) = first {
+                    //         if let Prefix::DeviceNS(_) = prefix.kind() {
+                    //         } else if !prefix.kind().is_verbatim() {
+                    //             panic!(
+                    //                 "First item kind is neither verbatim nor DeviceNs: {:?}",
+                    //                 stack
+                    //             )
+                    //         }
+                    //     } else {
+                    //         panic!("First item is not a Prefix on windows: {:?}", stack)
+                    //     }
+                    // }
 
-                        let first = Path::new(&stack[0]).components().next().unwrap();
-                        if let Component::Prefix(prefix) = first {
-                            if let Prefix::DeviceNS(_) = prefix.kind() {
-                            } else if !prefix.kind().is_verbatim() {
-                                panic!(
-                                    "First item kind is neither verbatim nor DeviceNs: {:?}",
-                                    stack
-                                )
-                            }
-                        } else {
-                            panic!("First item is not a Prefix on windows: {:?}", stack)
-                        }
-                    }
+                    let root = PathArc::new(r"\").canonicalize()?;
+                    stack.extend(root.components().map(to_os));
+                } else {
+                    // Always push the "root" component.
+                    stack.push(to_os(component));
                 }
-                // Always push the "root" component.
-                stack.push(to_os(component));
             }
             Component::ParentDir | Component::Normal(_) => {
                 assert!(!recursing);

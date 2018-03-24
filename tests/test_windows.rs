@@ -90,8 +90,9 @@ fn canonicalize_root() {
 
 #[cfg_attr(windows, test)]
 fn canonicalize_verbatim() {
-    println!("CURRENT DIR: {}", ::std::env::current_dir().unwrap().display());
     // CURRENT DIR: C:\projects\path-abs
+    println!("CURRENT DIR: {}", ::std::env::current_dir().unwrap().display());
+
     // TODO:
     // EXPECTED ERR Canonicalizing "\\\\?\\project" => The system cannot find the file specified.
     // (os error 2)
@@ -100,10 +101,6 @@ fn canonicalize_verbatim() {
 
 #[cfg_attr(windows, test)]
 fn canonicalize_verbatim_unc() {
-    // TODO: current result:
-    // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
-    // specified. (os error 3)
-    //
     // HOSTNAME: APPVYR-WIN
     // ### SHARED:
     // Caption        Name    Path
@@ -114,6 +111,9 @@ fn canonicalize_verbatim_unc() {
 
     let _ = share(); // FIXME: just printing for now
     let p = format!(r"\\?\{}\C$", hostname());
+    // TODO: current result:
+    // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
+    // specified. (os error 3)
     expect_err!(&p);
 }
 
