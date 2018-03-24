@@ -21,10 +21,19 @@ use std::env;
 
 #[test]
 fn test_absolute() {
+    if cfg!(windows) {
+        let result = Path::new(r"\").canonicalize();
+        assert!(result.is_ok(), "Should work before set_current_dir is called: {:?}", result);
+    }
     let tmp = tempdir::TempDir::new("ex").unwrap();
     let tmp = tmp.path();
     let tmp_abs = PathArc::new(&tmp).canonicalize().unwrap();
     env::set_current_dir(&tmp_abs).unwrap();
+    if cfg!(windows) {
+        let result = Path::new(r"\").canonicalize();
+        assert!(result.is_err());
+        println!("Got ERR cananonicalizing root: {}", result.unwrap_err());
+    }
 
     // Create directory like:
     // a/
