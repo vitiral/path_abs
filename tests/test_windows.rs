@@ -28,42 +28,93 @@ macro_rules! expect_err {
     }}
 }
 
+macro_rules! expect_path {
+    [$expect:expr, $s:expr] => {{
+        let expect = Path::new($expect);
+        let p = Path::new($s);
+        match p.canonicalize() {
+            Ok(p) => {
+                assert_eq!(expect, p);
+                println!("EXPECTED OK Canonicalizing {:?} => {:?}", $s, p);
+            }
+            Err(err) => {
+                panic!("Got {:?} when canonicalizing {:?}, expected {:?}", err, $s, $expect);
+            }
+        }
+    }}
+}
+
+fn share() -> String {
+    if cfg!(windows) {
+        let shared = ::std::process::Command::new("wmic")
+            .arg("share")
+            .arg("get")
+            .arg("caption,name,path")
+            .output()
+            .expect("could not `wmic share`")
+            .stdout;
+        let out = ::std::str::from_utf8(&shared).unwrap().trim().to_string();
+        println!("### SHARED:\n{}\n###", out);
+        out
+    } else {
+        "NONE SHARED".to_string()
+    }
+}
+
 fn hostname() -> String {
     let hostname = ::std::process::Command::new("hostname")
         .output()
         .expect("could not get hostname")
         .stdout;
-    ::std::str::from_utf8(&hostname).unwrap().trim().to_string()
+    let out = ::std::str::from_utf8(&hostname).unwrap().trim().to_string();
+    println!("HOSTNAME: {}", out);
+    out
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_root() {
-    expect_err!(r"\");
+fn canonicalize_root() {
+    expect_path!(r"\\?\C:\", r"\");
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_verbatim() {
+fn canonicalize_verbatim() {
+    println!("CURRENT DIR: {}", ::std::env::current_dir().unwrap().display());
+    // TODO:
+    // EXPECTED ERR Canonicalizing "\\\\?\\project" => The system cannot find the file specified.
+    // (os error 2)
     expect_err!(r"\\?\project");
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_verbatim_unc() {
+fn canonicalize_verbatim_unc() {
+    // TODO: current result:
+    // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
+    // specified. (os error 3)
+
+    let _ = share(); // FIXME: just printing for now
     let p = format!(r"\\?\{}\share", hostname());
     expect_err!(&p);
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_verbatim_disk() {
-    expect_err!(r"\\?\C:\")
+fn canonicalize_verbatim_disk() {
+    let with_root = r"\\?\C:\";
+    expect_path!(with_root, with_root);
+    expect_err!(r"\\?\C:")
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_device_ns() {
-    expect_err!(r"\\.\com1")
+fn canonicalize_device_ns() {
+    // TODO: EXPECTED ERR Canonicalizing "\\\\.\\com1" => The system cannot find the file
+    // specified. (os error 2)
+    expect_err!(r"\\.\COM1")
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_unc() {
+fn canonicalize_unc() {
+    // TODO:
+    // canonicalize_unc' panicked at 'called `Result::unwrap()` on an `Err` value: Error { repr:
+    // Os { code: 67, message: "The network name cannot be found." }
     let h = hostname();
     let unc = format!(r"\\{}\share", h);
     let verbatim = format!(r"\\?\{}\share", h);
@@ -72,7 +123,6 @@ fn cannonicalize_unc() {
 }
 
 #[cfg_attr(windows, test)]
-fn cannonicalize_disk() {
-    let result = Path::new(r"C:\").canonicalize().unwrap();
-    assert_eq!(Path::new(r"\\?\C:\"), result);
+fn canonicalize_disk() {
+    expect_path!(r"\\?\C:\", r"C:\")
 }
