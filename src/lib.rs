@@ -240,7 +240,7 @@ mod write;
 mod read;
 
 pub use abs::PathAbs;
-pub use arc::{PathArc, current_dir};
+pub use arc::{current_dir, PathArc};
 pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
 pub use ty::PathType;

@@ -34,7 +34,6 @@ pub fn current_dir(resolving: &PathArc) -> Result<PathArc> {
     Ok(PathArc::from(cwd))
 }
 
-
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// A `PathBuf` that is atomically reference counted and reimplements the `PathBuf`
 /// methods to display the action and path when there is an error.
@@ -346,7 +345,7 @@ fn handle_prefix(
 
         match component {
             Component::CurDir => {
-                assert_eq!(recursing, false);
+                assert!(!recursing);
 
                 // ignore
                 continue;
@@ -368,11 +367,8 @@ fn handle_prefix(
                 }
             }
             Component::RootDir => {
-
                 if cfg!(windows) {
-                    // we were called by something that got cwd... so it better not start with `\`.
-                    assert!(!recursing);
-
+                    assert!(!recursing); // windows should not give `\` in CWD
                     // https://stackoverflow.com/questions/151860
                     // > In Windows [root is] relative to what drive your current working
                     // > directory is at the time.
