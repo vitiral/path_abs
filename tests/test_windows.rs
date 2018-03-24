@@ -13,6 +13,7 @@ extern crate tempdir;
 extern crate pretty_assertions;
 
 use std::path::Path;
+use std::process::Command;
 
 macro_rules! expect_err {
     [$s:expr] => {{
@@ -45,8 +46,9 @@ macro_rules! expect_path {
 }
 
 fn share() -> String {
+    // http://www.tech-recipes.com/rx/2953/windows_list_shared_drives_folders_command_line/
     if cfg!(windows) {
-        let shared = ::std::process::Command::new("wmic")
+        let shared = Command::new("wmic")
             .arg("share")
             .arg("get")
             .arg("caption,name,path")
@@ -62,12 +64,22 @@ fn share() -> String {
 }
 
 fn hostname() -> String {
-    let hostname = ::std::process::Command::new("hostname")
+    let hostname = Command::new("hostname")
         .output()
         .expect("could not get hostname")
         .stdout;
     let out = ::std::str::from_utf8(&hostname).unwrap().trim().to_string();
     println!("HOSTNAME: {}", out);
+    out
+}
+
+fn coms() -> String {
+    let coms = Command::new("mode")
+        .output()
+        .expect("could not get `mode` comports")
+        .stdout;
+    let out = ::std::str::from_utf8(&coms).unwrap().trim().to_string();
+    println!("### COMS:\n{}\n###", out);
     out
 }
 
@@ -79,10 +91,11 @@ fn canonicalize_root() {
 #[cfg_attr(windows, test)]
 fn canonicalize_verbatim() {
     println!("CURRENT DIR: {}", ::std::env::current_dir().unwrap().display());
+    // CURRENT DIR: C:\projects\path-abs
     // TODO:
     // EXPECTED ERR Canonicalizing "\\\\?\\project" => The system cannot find the file specified.
     // (os error 2)
-    expect_err!(r"\\?\project");
+    expect_err!(r"\\?\projects");
 }
 
 #[cfg_attr(windows, test)]
@@ -90,9 +103,17 @@ fn canonicalize_verbatim_unc() {
     // TODO: current result:
     // EXPECTED ERR Canonicalizing "\\\\?\\APPVYR-WIN\\share" => The system cannot find the path
     // specified. (os error 3)
+    //
+    // HOSTNAME: APPVYR-WIN
+    // ### SHARED:
+    // Caption        Name    Path
+    // Remote Admin   ADMIN$  C:\windows
+    // Default share  C$      C:\
+    // Remote IPC     IPC$
+    // ###
 
     let _ = share(); // FIXME: just printing for now
-    let p = format!(r"\\?\{}\share", hostname());
+    let p = format!(r"\\?\{}\C$", hostname());
     expect_err!(&p);
 }
 
@@ -100,6 +121,8 @@ fn canonicalize_verbatim_unc() {
 fn canonicalize_verbatim_disk() {
     let with_root = r"\\?\C:\";
     expect_path!(with_root, with_root);
+
+    // EXPECTED ERR Canonicalizing "\\\\?\\C:" => Incorrect function. (os error 1)
     expect_err!(r"\\?\C:")
 }
 
@@ -107,6 +130,7 @@ fn canonicalize_verbatim_disk() {
 fn canonicalize_device_ns() {
     // TODO: EXPECTED ERR Canonicalizing "\\\\.\\com1" => The system cannot find the file
     // specified. (os error 2)
+    let _ = coms();
     expect_err!(r"\\.\COM1")
 }
 
@@ -116,8 +140,8 @@ fn canonicalize_unc() {
     // canonicalize_unc' panicked at 'called `Result::unwrap()` on an `Err` value: Error { repr:
     // Os { code: 67, message: "The network name cannot be found." }
     let h = hostname();
-    let unc = format!(r"\\{}\share", h);
-    let verbatim = format!(r"\\?\{}\share", h);
+    let unc = format!(r"\\{}\C$", h);
+    let verbatim = format!(r"\\?\{}\C$", h);
     let result = Path::new(&unc).canonicalize().unwrap();
     assert_eq!(Path::new(&verbatim), result);
 }
