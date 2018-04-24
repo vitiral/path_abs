@@ -8,9 +8,9 @@
 //! Test assumptions about windows
 #![cfg_attr(not(windows), allow(dead_code))]
 extern crate path_abs;
-extern crate tempdir;
 #[macro_use]
 extern crate pretty_assertions;
+extern crate tempdir;
 
 use std::path::Path;
 use std::process::Command;

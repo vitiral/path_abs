@@ -7,6 +7,8 @@
  */
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use stfu8;
+use std::string::ToString;
+use std::str::FromStr;
 
 #[cfg(unix)]
 use std::ffi::OsStr;
@@ -27,16 +29,6 @@ macro_rules! map_err {
 }
 
 impl PathArc {
-    /// Convert the `PathArc` into an STFU8 `String`.
-    pub fn to_string(&self) -> String {
-        self.to_stfu8()
-    }
-
-    /// Convert STFU8 `str` to a `PathArc`.
-    pub fn from_str(s: &str) -> Result<PathArc, stfu8::DecodeError> {
-        PathArc::from_stfu8(s)
-    }
-
     #[cfg(unix)]
     pub(crate) fn to_stfu8(&self) -> String {
         let bytes = self.as_os_str().as_bytes();
@@ -61,6 +53,22 @@ impl PathArc {
         let raw_path = stfu8::decode_u16(&s)?;
         let os_str = OsString::from_wide(&raw_path);
         Ok(PathArc::new(os_str))
+    }
+}
+
+impl ToString for PathArc {
+    /// Convert the `PathArc` into an STFU8 `String`.
+    fn to_string(&self) -> String {
+        self.to_stfu8()
+    }
+}
+
+impl FromStr for PathArc {
+    type Err = stfu8::DecodeError;
+
+    /// Convert STFU8 `str` to a `PathArc`.
+    fn from_str(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+        PathArc::from_stfu8(s)
     }
 }
 

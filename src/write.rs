@@ -203,3 +203,9 @@ impl Deref for FileWrite {
         &self.0
     }
 }
+
+impl Into<File> for FileWrite {
+    fn into(self) -> File {
+        self.0.into()
+    }
+}

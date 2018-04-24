@@ -11,9 +11,9 @@
 //! - `..` paths that consume the "root"
 
 extern crate path_abs;
-extern crate tempdir;
 #[macro_use]
 extern crate pretty_assertions;
+extern crate tempdir;
 
 use path_abs::*;
 use std::path::Path;
@@ -23,7 +23,11 @@ use std::env;
 fn test_absolute() {
     if cfg!(windows) {
         let result = Path::new(r"\").canonicalize();
-        assert!(result.is_ok(), "Should work before set_current_dir is called: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Should work before set_current_dir is called: {:?}",
+            result
+        );
     }
     let tmp = tempdir::TempDir::new("ex").unwrap();
     let tmp = tmp.path();

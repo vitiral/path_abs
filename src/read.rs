@@ -106,3 +106,9 @@ impl Deref for FileRead {
         &self.0
     }
 }
+
+impl Into<File> for FileRead {
+    fn into(self) -> File {
+        self.0.into()
+    }
+}
