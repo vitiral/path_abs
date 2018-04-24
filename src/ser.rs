@@ -70,7 +70,6 @@ impl FromStr for PathArc {
     fn from_str(s: &str) -> Result<PathArc, stfu8::DecodeError> {
         PathArc::from_stfu8(s)
     }
-
 }
 
 impl Serialize for PathArc {

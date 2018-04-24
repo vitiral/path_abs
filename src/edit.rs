@@ -229,3 +229,9 @@ impl Deref for FileEdit {
         &self.0
     }
 }
+
+impl Into<File> for FileEdit {
+    fn into(self) -> File {
+        self.0.into()
+    }
+}
