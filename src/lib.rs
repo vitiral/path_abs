@@ -211,6 +211,8 @@ extern crate serde_derive;
 extern crate std_prelude;
 #[cfg(feature = "serialize")]
 extern crate stfu8;
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 #[cfg(test)]
@@ -221,6 +223,8 @@ extern crate regex;
 extern crate serde_json;
 #[cfg(test)]
 extern crate tempdir;
+#[cfg(test)]
+extern crate env_logger;
 
 use std::io;
 use std::error;
