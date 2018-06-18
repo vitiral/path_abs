@@ -239,6 +239,8 @@ mod ty;
 mod write;
 mod read;
 
+pub mod monotonic_path_preview;
+
 pub use abs::PathAbs;
 pub use arc::{current_dir, PathArc};
 pub use dir::{ListDir, PathDir};
