@@ -7,13 +7,13 @@
 os: Visual Studio 2015
 
 # Bors configuration
-branches:
-  only:
-    - mainline
-    # This is where pull requests from "bors r+" are built.
-    - staging
-    # This is where pull requests from "bors try" are built.
-    - trying
+# branches:
+#   only:
+#     - mainline
+#     # This is where pull requests from "bors r+" are built.
+#     - staging
+#     # This is where pull requests from "bors try" are built.
+#     - trying
 
 ## Build Matrix ##
 
