@@ -84,14 +84,6 @@ fn hostname() -> String {
 //     out
 // }
 
-#[cfg_attr(windows, test)]
-fn canonicalize_root() {
-    // TODO:
-    // This works here, but it doesn't work when called in src/arc.rs::handle_prefix
-    // during `test_absolute`, possibly related to setting the current_dir?
-    expect_path!(r"\\?\C:\", r"\");
-}
-
 // TODO: I don't know what is even a valid verbatum path, and I can't list it directly
 // ERROR: "The filename, directory name, or volume label syntax is incorrect."
 //
@@ -120,6 +112,8 @@ fn canonicalize_verbatim_unc() {
     // Remote IPC     IPC$
     // ###
 
+    // TODO: Only works on Windows hosts with the default administrative
+    // file shares enabled.
     let _ = share(); // FIXME: just printing for now
     let p = format!(r"\\?\UNC\{}\C$", hostname());
     expect_path!(&p, &p);
@@ -145,6 +139,8 @@ fn canonicalize_verbatim_disk() {
 
 #[cfg_attr(windows, test)]
 fn canonicalize_unc() {
+    // TODO: Only works on Windows hosts with the default administrative
+    // file shares enabled.
     let h = hostname();
     let unc = format!(r"\\{}\C$", h);
     let verbatim = format!(r"\\?\UNC\{}\C$", h);
