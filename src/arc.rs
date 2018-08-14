@@ -12,7 +12,7 @@ use std::fs;
 use std::io;
 use std::env;
 use std::ffi::OsStr;
-use std::path::{Component, Components, Prefix};
+use std::path::Component;
 use std_prelude::*;
 
 use super::{Error, Result};
@@ -183,47 +183,62 @@ impl PathArc {
     /// [`canonicalize`]: struct.PathAbs.html#method.canonicalize
     /// [`current_dir`]: fn.current_dir.html
     pub fn absolute(&self) -> Result<PathAbs> {
-        let mut components = self.components();
-        let mut stack: Vec<OsString> = Vec::new();
+        let mut res = current_dir(self)?.canonicalize()?;
 
-        macro_rules! pop_stack { [] => {{
-            if let None = stack.pop() {
-                return Err(Error::new(
-                    io::Error::new(io::ErrorKind::NotFound, ".. consumed root"),
-                    "resolving absolute",
-                    self.clone(),
-                ));
-            }
-        }}}
-
-        handle_prefix(self, &mut stack, &mut components, false)?;
-
-        for component in components {
-            match component {
-                Component::CurDir => { /* ignore, probably impossible */ }
-                Component::Prefix(_) => unreachable!(),
-                Component::RootDir => {
-                    if cfg!(unix) {
-                        unreachable!("root is already handled on unix");
+        for each in self.components() {
+            match each {
+                // This path starts with a (possibly already canonical) prefix
+                Component::Prefix(p) => {
+                    if p.kind().is_verbatim() {
+                        // This prefix already uses the extended-length
+                        // syntax, so we can use it as-is.
+                        res = PathAbs(res.join(p.as_os_str()));
+                    } else {
+                        // This prefix needs canonicalization.
+                        let prefix = PathArc::new(p.as_os_str());
+                        res = PathAbs(res.join(prefix.canonicalize()?));
                     }
-                    // This is actually possible on windows because root is distinct
-                    // from prefix (?)
-                    stack.push(to_os(component));
                 }
-                Component::ParentDir => pop_stack!(),
-                Component::Normal(_) => stack.push(to_os(component)),
+
+                // This path starts at a root, which can't be safely
+                // canonicalized if we're on Windows and the current directory
+                // uses extended-length path syntax. However, we don't need to
+                // do that - we can just push this Component to res to remove
+                // any existing path.
+                Component::RootDir => {
+                    res = PathAbs(res.join(each));
+                }
+
+                // This does nothing and can be ignored.
+                Component::CurDir => (),
+
+                // We're lexically resolving parent components, so we'll just
+                // pop off the end of the path.
+                Component::ParentDir => {
+                    res = match res.parent() {
+                        // The path has a parent, use it as our new path
+                        Some(p) => PathAbs(PathArc::new(p)),
+
+                        // The path has no parent, return an error!
+                        None => return Err(Error::new(
+                            io::Error::new(
+                                io::ErrorKind::NotFound,
+                                ".. consumed root",
+                            ),
+                            "resolving absolute",
+                            self.clone(),
+                        )),
+                    };
+                }
+
+                // Just a normal path segment, add it to the result.
+                Component::Normal(c) => {
+                    res = PathAbs(res.join(c));
+                }
             }
         }
 
-        if stack.is_empty() {
-            return Err(Error::new(
-                io::Error::new(io::ErrorKind::NotFound, "resolving resulted in empty path"),
-                "resolving absolute",
-                self.clone(),
-            ));
-        }
-
-        Ok(PathAbs(PathArc(Arc::new(PathBuf::from_iter(stack)))))
+        Ok(res)
     }
 }
 
@@ -308,120 +323,6 @@ impl Into<PathBuf> for PathArc {
             Err(inner) => inner.as_ref().clone(),
         }
     }
-}
-
-fn to_os(c: Component) -> OsString {
-    c.as_os_str().to_os_string()
-}
-
-/// Handle the prefix in the components.
-///
-/// Pretty much 100% of this logic is because windows is evil. You can't call `canonicalize` on `\`
-/// since it depends on the current directory. You also can't call it when it would be a noop, i.e.
-/// for `\\?\C:`.
-fn handle_prefix(
-    resolving: &PathArc,
-    stack: &mut Vec<OsString>,
-    components: &mut Components,
-    recursing: bool,
-) -> Result<()> {
-    macro_rules! pop_stack { [] => {{
-        if let None = stack.pop() {
-            return Err(Error::new(
-                io::Error::new(io::ErrorKind::NotFound, ".. consumed root"),
-                "resolving absolute",
-                resolving.clone(),
-            ));
-        }
-    }}}
-    loop {
-        // The whole reason we're here is because we haven't added anything to the stack yet.
-        assert_eq!(stack.len(), 0, "{:?}", stack);
-
-        let component = match components.next() {
-            None => break,
-            Some(c) => c,
-        };
-
-        match component {
-            Component::CurDir => {
-                assert!(!recursing);
-
-                // ignore
-                continue;
-            }
-            Component::Prefix(prefix) => {
-                assert!(!cfg!(unix), "Component::Prefix in unix");
-                match prefix.kind() {
-                    Prefix::Disk(_) | Prefix::UNC(_, _) => {
-                        // Make the prefix a more "standard" form
-                        let c = PathArc::new(component.as_os_str()).canonicalize()?;
-                        stack.extend(c.components().map(to_os));
-                    }
-                    _ => {
-                        // Already in the "most standardized" form
-                        // TODO: some more testing to make sure that canoninicalize()
-                        // cannot be called on these forms would be good
-                        stack.push(to_os(component));
-                    }
-                }
-            }
-            Component::RootDir => {
-                if cfg!(windows) {
-                    assert!(!recursing); // windows should not give `\` in CWD
-                                         // https://stackoverflow.com/questions/151860
-                                         // > In Windows [root is] relative to what drive your current working
-                                         // > directory is at the time.
-                                         //
-                                         // So, we need to push the "drive" first.
-
-                    let cwd = current_dir(resolving)?;
-                    handle_prefix(resolving, stack, &mut cwd.components(), true)?;
-                    {
-                        // Double check that we aren't being dumb. `current_dir`
-                        // should have always started with some kind of prefix.
-
-                        // TODO: not sure why, but this assertion actually can fail and
-                        // does in the tests.
-                        // assert_eq!(1, stack.len(), "{:?}", stack);
-
-                        let first = Path::new(&stack[0]).components().next().unwrap();
-                        if let Component::Prefix(prefix) = first {
-                            if let Prefix::DeviceNS(_) = prefix.kind() {
-                            } else if !prefix.kind().is_verbatim() {
-                                panic!(
-                                    "First item kind is neither verbatim nor DeviceNs: {:?}",
-                                    stack
-                                )
-                            }
-                        } else {
-                            panic!("First item is not a Prefix on windows: {:?}", stack)
-                        }
-                    }
-                }
-                // Always push the "root" component.
-                stack.push(to_os(component));
-            }
-            Component::ParentDir | Component::Normal(_) => {
-                assert!(!recursing);
-
-                // First item is either a ParentDir or Normal, in either
-                // case we need to get current_dir
-                let cwd = current_dir(resolving)?;
-                let mut cwd_components = cwd.components();
-                handle_prefix(resolving, stack, &mut cwd_components, true)?;
-                stack.extend(cwd_components.map(to_os));
-
-                match component {
-                    Component::ParentDir => pop_stack!(),
-                    Component::Normal(_) => stack.push(to_os(component)),
-                    _ => unreachable!(),
-                }
-            }
-        }
-        break;
-    }
-    Ok(())
 }
 
 #[test]

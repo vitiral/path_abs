@@ -134,7 +134,7 @@ mod unix {
         assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);
         assert_eq!(
             err.io_error().to_string(),
-            "resolving resulted in empty path"
+            ".. consumed root"
         );
         assert_eq!(err.action(), "resolving absolute");
         assert_eq!(err.path(), path::Path::new("/foo/../.."));
@@ -163,15 +163,15 @@ mod windows {
     #[test]
     fn absolute_path_cannot_go_above_root() {
         ::setup();
-        // TODO: This is broken, and only really works if the current
-        // directory on C: is \. Otherwise, handle_prefix() canonicalizes
-        // "C:" to get "C:\Users\st" then appends "\", "foo", "..", ".."
-        // and gets back to "C:\Users\st".
-        let actual = PathArc::new(r"C:\foo\..\..").absolute().unwrap();
-        let expected = PathArc::new(path::Path::new(r"C:").canonicalize().unwrap())
-            .absolute()
-            .unwrap();
-        assert_eq!(actual, expected);
+        let err = PathArc::new(r"C:\foo\..\..").absolute().unwrap_err();
+
+        assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);
+        assert_eq!(
+            err.io_error().to_string(),
+            ".. consumed root"
+        );
+        assert_eq!(err.action(), "resolving absolute");
+        assert_eq!(err.path(), path::Path::new(r"C:\foo\..\.."));
     }
 
     #[test]
