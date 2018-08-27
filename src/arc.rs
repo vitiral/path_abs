@@ -183,7 +183,16 @@ impl PathArc {
     /// [`canonicalize`]: struct.PathAbs.html#method.canonicalize
     /// [`current_dir`]: fn.current_dir.html
     pub fn absolute(&self) -> Result<PathAbs> {
-        let mut res = current_dir(self)?.canonicalize()?;
+        let cwd = env::current_dir().map_err(|e| {
+            Error::new(
+                e,
+                "getting current_dir while resolving absolute",
+                self.clone(),
+            )
+        })?;
+        let mut res = cwd.canonicalize().map_err(|e| {
+            Error::new(e, "canonicalizing", PathArc::new(&cwd))
+        })?;
 
         for each in self.components() {
             match each {
@@ -192,11 +201,19 @@ impl PathArc {
                     if p.kind().is_verbatim() {
                         // This prefix already uses the extended-length
                         // syntax, so we can use it as-is.
-                        res = PathAbs(res.join(p.as_os_str()));
+                        res.push(p.as_os_str());
                     } else {
                         // This prefix needs canonicalization.
-                        let prefix = PathArc::new(p.as_os_str());
-                        res = PathAbs(res.join(prefix.canonicalize()?));
+                        let prefix = Path::new(p.as_os_str())
+                            .canonicalize()
+                            .map_err(|e|
+                                Error::new(
+                                    e,
+                                    "canonicalizing",
+                                    PathArc::new(p.as_os_str()),
+                                )
+                            )?;
+                        res.push(prefix);
                     }
                 }
 
@@ -206,7 +223,7 @@ impl PathArc {
                 // do that - we can just push this Component to res to remove
                 // any existing path.
                 Component::RootDir => {
-                    res = PathAbs(res.join(each));
+                    res.push(each);
                 }
 
                 // This does nothing and can be ignored.
@@ -214,31 +231,26 @@ impl PathArc {
 
                 // We're lexically resolving parent components, so we'll just
                 // pop off the end of the path.
-                Component::ParentDir => {
-                    res = match res.parent() {
-                        // The path has a parent, use it as our new path
-                        Some(p) => PathAbs(PathArc::new(p)),
-
-                        // The path has no parent, return an error!
-                        None => return Err(Error::new(
+                Component::ParentDir => 
+                    if !res.pop() {
+                        return Err(Error::new(
                             io::Error::new(
                                 io::ErrorKind::NotFound,
                                 ".. consumed root",
                             ),
                             "resolving absolute",
                             self.clone(),
-                        )),
-                    };
-                }
+                        ))
+                    }
 
                 // Just a normal path segment, add it to the result.
                 Component::Normal(c) => {
-                    res = PathAbs(res.join(c));
+                    res.push(c);
                 }
             }
         }
 
-        Ok(res)
+        Ok(PathAbs(PathArc(Arc::new(res))))
     }
 }
 
