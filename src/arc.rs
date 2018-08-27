@@ -12,7 +12,7 @@ use std::fs;
 use std::io;
 use std::env;
 use std::ffi::OsStr;
-use std::path::Component;
+use std::path::{Component, PrefixComponent};
 use std_prelude::*;
 
 use super::{Error, Result};
@@ -32,6 +32,34 @@ pub fn current_dir(resolving: &PathArc) -> Result<PathArc> {
         )
     })?;
     Ok(PathArc::from(cwd))
+}
+
+/// Converts any PrefixComponent into verbatim ("extended-length") form.
+fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
+    let path_prefix = Path::new(prefix.as_os_str());
+
+    if prefix.kind().is_verbatim() {
+        // This prefix already uses the extended-length
+        // syntax, so we can use it as-is.
+        Ok(path_prefix.to_path_buf())
+    } else {
+        // This prefix needs canonicalization.
+        let res = path_prefix
+            .canonicalize()
+            .map_err(|e|
+                Error::new(e, "canonicalizing", PathArc::new(path_prefix))
+            )?;
+        Ok(res)
+    }
+}
+
+/// Pops the last component from path, returning an error for a root path.
+fn pop_or_error(path: &mut PathBuf) -> ::std::result::Result<(), io::Error> {
+    if path.pop() {
+        Ok(())
+    } else {
+        Err(io::Error::new(io::ErrorKind::NotFound, ".. consumed root"))
+    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -196,57 +224,29 @@ impl PathArc {
 
         for each in self.components() {
             match each {
-                // This path starts with a (possibly already canonical) prefix
+                // This path starts with a (possibly already canonical) prefix,
+                // so we can replace whatever path we already have.
                 Component::Prefix(p) => {
-                    if p.kind().is_verbatim() {
-                        // This prefix already uses the extended-length
-                        // syntax, so we can use it as-is.
-                        res.push(p.as_os_str());
-                    } else {
-                        // This prefix needs canonicalization.
-                        let prefix = Path::new(p.as_os_str())
-                            .canonicalize()
-                            .map_err(|e|
-                                Error::new(
-                                    e,
-                                    "canonicalizing",
-                                    PathArc::new(p.as_os_str()),
-                                )
-                            )?;
-                        res.push(prefix);
-                    }
+                    res = make_verbatim_prefix(&p)?;
                 }
 
-                // This path starts at a root, which can't be safely
-                // canonicalized if we're on Windows and the current directory
-                // uses extended-length path syntax. However, we don't need to
-                // do that - we can just push this Component to res to remove
-                // any existing path.
-                Component::RootDir => {
-                    res.push(each);
-                }
+                // This path starts at a root of some prefix, so we can truncate
+                // our result to the root of whatever prefix it's currently
+                // using.
+                Component::RootDir => res.push(each),
 
                 // This does nothing and can be ignored.
                 Component::CurDir => (),
 
                 // We're lexically resolving parent components, so we'll just
                 // pop off the end of the path.
-                Component::ParentDir => 
-                    if !res.pop() {
-                        return Err(Error::new(
-                            io::Error::new(
-                                io::ErrorKind::NotFound,
-                                ".. consumed root",
-                            ),
-                            "resolving absolute",
-                            self.clone(),
-                        ))
-                    }
+                Component::ParentDir => pop_or_error(&mut res)
+                    .map_err(|e| {
+                        Error::new(e, "resolving absolute", self.clone())
+                    })?,
 
                 // Just a normal path segment, add it to the result.
-                Component::Normal(c) => {
-                    res.push(c);
-                }
+                Component::Normal(c) => res.push(c),
             }
         }
 
