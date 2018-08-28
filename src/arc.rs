@@ -211,42 +211,70 @@ impl PathArc {
     /// [`canonicalize`]: struct.PathAbs.html#method.canonicalize
     /// [`current_dir`]: fn.current_dir.html
     pub fn absolute(&self) -> Result<PathAbs> {
-        let cwd = env::current_dir().map_err(|e| {
-            Error::new(
-                e,
-                "getting current_dir while resolving absolute",
-                self.clone(),
-            )
-        })?;
-        let mut res = cwd.canonicalize().map_err(|e| {
-            Error::new(e, "canonicalizing", PathArc::new(&cwd))
-        })?;
+        let mut res = PathBuf::new();
+
+        fn maybe_init_res(res: &mut PathBuf, resolvee: &PathArc) -> Result<()> {
+            if res.as_os_str() != "" {
+                // res has already been initialized, let's leave it alone.
+                return Ok(());
+            }
+
+            // res has not been initialized, let's initialize it to the
+            // canonicalized current directory.
+            let cwd = env::current_dir().map_err(|e| {
+                Error::new(
+                    e,
+                    "getting current_dir while resolving absolute",
+                    resolvee.clone(),
+                )
+            })?;
+            *res = cwd.canonicalize().map_err(|e| {
+                Error::new(e, "canonicalizing", PathArc::new(&cwd))
+            })?;
+
+            Ok(())
+        };
 
         for each in self.components() {
             match each {
-                // This path starts with a (possibly already canonical) prefix,
-                // so we can replace whatever path we already have.
                 Component::Prefix(p) => {
+                    // We don't care what's already in res, we can entirely
+                    // replace it..
                     res = make_verbatim_prefix(&p)?;
                 }
 
-                // This path starts at a root of some prefix, so we can truncate
-                // our result to the root of whatever prefix it's currently
-                // using.
-                Component::RootDir => res.push(each),
+                Component::RootDir => {
+                    if cfg!(windows) {
+                        // A root path component is relative to some existing
+                        // path, so we may need to initialize res.
+                        maybe_init_res(&mut res, self)?;
+                        res.push(each);
+                    } else {
+                        // On other platforms, a root path component is always
+                        // absolute so we can replace whatever's in res.
+                        res = Path::new(&each).to_path_buf();
+                    }
+                }
 
                 // This does nothing and can be ignored.
                 Component::CurDir => (),
 
-                // We're lexically resolving parent components, so we'll just
-                // pop off the end of the path.
-                Component::ParentDir => pop_or_error(&mut res)
-                    .map_err(|e| {
-                        Error::new(e, "resolving absolute", self.clone())
-                    })?,
+                Component::ParentDir => {
+                    // A parent component is always relative to some existing
+                    // path.
+                    maybe_init_res(&mut res, self)?;
+                    pop_or_error(&mut res)
+                        .map_err(|e| {
+                            Error::new(e, "resolving absolute", self.clone())
+                        })?;
+                }
 
-                // Just a normal path segment, add it to the result.
-                Component::Normal(c) => res.push(c),
+                Component::Normal(c) => {
+                    // A normal component is always relative to some existing
+                    // path.
+                    maybe_init_res(&mut res, self)?;
+                    res.push(c);
+                }
             }
         }
 
