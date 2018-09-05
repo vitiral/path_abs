@@ -245,8 +245,17 @@ impl PathArc {
 
                 Component::RootDir => {
                     if cfg!(windows) {
-                        // A root path component is relative to some existing
-                        // path, so we may need to initialize res.
+                        // In an ideal world, we would say
+                        //
+                        //  res = std::fs::canonicalize(each)?;
+                        //
+                        // ...to get a properly canonicalized path.
+                        // Unfortunately, Windows cannot canonicalize `\` if
+                        // the current directory happens to use extended-length
+                        // syntax (like `\\?\C:\Windows`), so we'll have to do
+                        // it manually: initialize `res` with the current
+                        // working directory (whatever it is), and truncate it
+                        // to its prefix by pushing `\`.
                         maybe_init_res(&mut res, self)?;
                         res.push(each);
                     } else {
