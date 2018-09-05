@@ -214,7 +214,7 @@ impl PathArc {
         let mut res = PathBuf::new();
 
         fn maybe_init_res(res: &mut PathBuf, resolvee: &PathArc) -> Result<()> {
-            if res.as_os_str() != "" {
+            if !res.as_os_str().is_empty() {
                 // res has already been initialized, let's leave it alone.
                 return Ok(());
             }
