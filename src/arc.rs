@@ -348,6 +348,12 @@ impl From<PathBuf> for PathArc {
     }
 }
 
+impl From<Arc<PathBuf>> for PathArc {
+    fn from(path: Arc<PathBuf>) -> PathArc {
+        PathArc(path)
+    }
+}
+
 impl Into<PathBuf> for PathArc {
     /// If there is only one reference to the `PathArc`, returns
     /// the inner `PathBuf`. Otherwise clones the inner `PathBuf`.
