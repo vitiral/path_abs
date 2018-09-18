@@ -9,10 +9,8 @@
 
 use std::fmt;
 use std::fs;
-use std::io;
 use std::env;
 use std::ffi::OsStr;
-use std::path::{Component, PrefixComponent};
 use std_prelude::*;
 
 use super::{Error, Result};
@@ -32,34 +30,6 @@ pub fn current_dir(resolving: &PathArc) -> Result<PathArc> {
         )
     })?;
     Ok(PathArc::from(cwd))
-}
-
-/// Converts any PrefixComponent into verbatim ("extended-length") form.
-fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
-    let path_prefix = Path::new(prefix.as_os_str());
-
-    if prefix.kind().is_verbatim() {
-        // This prefix already uses the extended-length
-        // syntax, so we can use it as-is.
-        Ok(path_prefix.to_path_buf())
-    } else {
-        // This prefix needs canonicalization.
-        let res = path_prefix
-            .canonicalize()
-            .map_err(|e|
-                Error::new(e, "canonicalizing", PathArc::new(path_prefix))
-            )?;
-        Ok(res)
-    }
-}
-
-/// Pops the last component from path, returning an error for a root path.
-fn pop_or_error(path: &mut PathBuf) -> ::std::result::Result<(), io::Error> {
-    if path.pop() {
-        Ok(())
-    } else {
-        Err(io::Error::new(io::ErrorKind::NotFound, ".. consumed root"))
-    }
 }
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -191,103 +161,13 @@ impl PathArc {
         self.as_ref()
     }
 
-    /// Convert the path to an absolute one, this is different from [`canonicalize`] in that it
-    /// _preserves_ symlinks and the destination may or may not exist.
+    /// Convert this path to an absolute one.
     ///
-    /// This function will:
-    /// - Use [`current_dir`] to resolve relative paths.
-    /// - Strip any `.` components (`/a/./c` -> `/a/c`)
-    /// - Resolve `..` _semantically_ (not using the file system). So, `a/b/c/../d => a/b/d` will
-    ///   _always_ be true regardless of symlinks. If you want symlinks correctly resolved, use
-    ///   `canonicalize()` instead.
+    /// See [`PathAbs::new()`] for details.
     ///
-    /// > On windows, this will sometimes call `canonicalize()` on the first component to guarantee
-    /// > it is the correct canonicalized prefix. For paths starting with root it also has to get
-    /// > the [`current_dir`]
-    ///
-    /// > On linux, the only syscall this will make is to get the [`current_dir`] for relative
-    /// > paths.
-    ///
-    /// [`canonicalize`]: struct.PathAbs.html#method.canonicalize
-    /// [`current_dir`]: fn.current_dir.html
+    /// [`PathAbs::new()`]: struct.PathAbs.html#method.new
     pub fn absolute(&self) -> Result<PathAbs> {
-        let mut res = PathBuf::new();
-
-        fn maybe_init_res(res: &mut PathBuf, resolvee: &PathArc) -> Result<()> {
-            if !res.as_os_str().is_empty() {
-                // res has already been initialized, let's leave it alone.
-                return Ok(());
-            }
-
-            // res has not been initialized, let's initialize it to the
-            // canonicalized current directory.
-            let cwd = env::current_dir().map_err(|e| {
-                Error::new(
-                    e,
-                    "getting current_dir while resolving absolute",
-                    resolvee.clone(),
-                )
-            })?;
-            *res = cwd.canonicalize().map_err(|e| {
-                Error::new(e, "canonicalizing", PathArc::new(&cwd))
-            })?;
-
-            Ok(())
-        };
-
-        for each in self.components() {
-            match each {
-                Component::Prefix(p) => {
-                    // We don't care what's already in res, we can entirely
-                    // replace it..
-                    res = make_verbatim_prefix(&p)?;
-                }
-
-                Component::RootDir => {
-                    if cfg!(windows) {
-                        // In an ideal world, we would say
-                        //
-                        //  res = std::fs::canonicalize(each)?;
-                        //
-                        // ...to get a properly canonicalized path.
-                        // Unfortunately, Windows cannot canonicalize `\` if
-                        // the current directory happens to use extended-length
-                        // syntax (like `\\?\C:\Windows`), so we'll have to do
-                        // it manually: initialize `res` with the current
-                        // working directory (whatever it is), and truncate it
-                        // to its prefix by pushing `\`.
-                        maybe_init_res(&mut res, self)?;
-                        res.push(each);
-                    } else {
-                        // On other platforms, a root path component is always
-                        // absolute so we can replace whatever's in res.
-                        res = Path::new(&each).to_path_buf();
-                    }
-                }
-
-                // This does nothing and can be ignored.
-                Component::CurDir => (),
-
-                Component::ParentDir => {
-                    // A parent component is always relative to some existing
-                    // path.
-                    maybe_init_res(&mut res, self)?;
-                    pop_or_error(&mut res)
-                        .map_err(|e| {
-                            Error::new(e, "resolving absolute", self.clone())
-                        })?;
-                }
-
-                Component::Normal(c) => {
-                    // A normal component is always relative to some existing
-                    // path.
-                    maybe_init_res(&mut res, self)?;
-                    res.push(c);
-                }
-            }
-        }
-
-        Ok(PathAbs(PathArc(Arc::new(res))))
+        PathAbs::new(self)
     }
 }
 
