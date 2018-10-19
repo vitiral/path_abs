@@ -315,6 +315,29 @@ impl PathDir {
         Ok(PathDir(self.0.canonicalize()?))
     }
 
+    /// Get the parent directory of this directory as a `PathDir`.
+    ///
+    /// > This does not make aditional syscalls, as the parent by definition must be a directory
+    /// > and exist.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::PathDir;
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let src = PathDir::new("src")?;
+    /// let proj = src.parent_dir().unwrap();
+    /// assert_eq!(PathDir::new("src/..")?, proj);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn parent_dir(&self) -> Option<PathDir> {
+        match self.parent() {
+            Some(path) => Some(PathDir(PathAbs(PathArc::new(path)))),
+            None => None,
+        }
+    }
+
     /// Create a mock dir type. *For use in tests only*.
     ///
     /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
