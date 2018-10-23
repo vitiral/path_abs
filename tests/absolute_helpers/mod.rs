@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path;
 
-use path_abs::PathArc;
+use path_abs::PathAbs;
 
 use tempdir::TempDir;
 
@@ -45,8 +45,7 @@ fn absolute_path_is_idempotent() {
     // The current_dir() result is always absolute,
     // so absolutizing it should not change it.
 
-    let actual = PathArc::new(env::current_dir().unwrap())
-        .absolute()
+    let actual = PathAbs::new(env::current_dir().unwrap())
         .unwrap();
     let expected = env::current_dir().unwrap().canonicalize().unwrap();
 
@@ -56,8 +55,8 @@ fn absolute_path_is_idempotent() {
 #[test]
 fn absolute_path_removes_currentdir_component() {
     ::setup();
-    let actual = PathArc::new("foo/./bar").absolute().unwrap();
-    let expected = PathArc::new("foo/bar").absolute().unwrap();
+    let actual = PathAbs::new("foo/./bar").unwrap();
+    let expected = PathAbs::new("foo/bar").unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -65,8 +64,8 @@ fn absolute_path_removes_currentdir_component() {
 #[test]
 fn absolute_path_removes_empty_component() {
     ::setup();
-    let actual = PathArc::new("foo//bar").absolute().unwrap();
-    let expected = PathArc::new("foo/bar").absolute().unwrap();
+    let actual = PathAbs::new("foo//bar").unwrap();
+    let expected = PathAbs::new("foo/bar").unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -88,8 +87,8 @@ fn absolute_path_lexically_resolves_parentdir_component() {
 
     // Because of the symlink, a/link/../foo is actually b/foo, but
     // lexically resolving the path produces a/foo.
-    let actual = PathArc::new(a_dir.join("link/../foo")).absolute().unwrap();
-    let expected = PathArc::new(a_dir.join("foo")).absolute().unwrap();
+    let actual = PathAbs::new(a_dir.join("link/../foo")).unwrap();
+    let expected = PathAbs::new(a_dir.join("foo")).unwrap();
 
     assert_eq!(actual, expected);
 }
@@ -97,10 +96,8 @@ fn absolute_path_lexically_resolves_parentdir_component() {
 #[test]
 fn absolute_path_interprets_relative_to_current_directory() {
     ::setup();
-    let actual = PathArc::new("foo").absolute().unwrap();
-    let expected = PathArc::new(env::current_dir().unwrap())
-        .join("foo")
-        .absolute()
+    let actual = PathAbs::new("foo").unwrap();
+    let expected = PathAbs::new(env::current_dir().unwrap().join("foo"))
         .unwrap();
 
     assert_eq!(actual, expected);
@@ -121,7 +118,7 @@ mod unix {
             io::ErrorKind::NotFound,
         );
 
-        let path = PathArc::new(raw_path).absolute().unwrap();
+        let path = PathAbs::new(raw_path).unwrap();
 
         assert_eq!(path.as_os_str(), "/does/not/exist");
     }
@@ -129,7 +126,7 @@ mod unix {
     #[test]
     fn absolute_path_cannot_go_above_root() {
         ::setup();
-        let err = PathArc::new("/foo/../..").absolute().unwrap_err();
+        let err = PathAbs::new("/foo/../..").unwrap_err();
 
         assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);
         assert_eq!(
@@ -156,14 +153,14 @@ mod windows {
             io::ErrorKind::NotFound,
         );
 
-        let path = PathArc::new(raw_path).absolute().unwrap();
+        let path = PathAbs::new(raw_path).unwrap();
         assert_eq!(path.as_os_str(), r"\\?\C:\does\not\exist");
     }
 
     #[test]
     fn absolute_path_cannot_go_above_root() {
         ::setup();
-        let err = PathArc::new(r"C:\foo\..\..").absolute().unwrap_err();
+        let err = PathAbs::new(r"C:\foo\..\..").unwrap_err();
 
         assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);
         assert_eq!(
@@ -177,15 +174,14 @@ mod windows {
     #[test]
     fn absolute_supports_root_only_relative_path() {
         ::setup();
-        let actual = PathArc::new(r"\foo").absolute().unwrap();
+        let actual = PathAbs::new(r"\foo").unwrap();
 
         let mut current_drive_root = path::PathBuf::new();
         current_drive_root.extend(
             env::current_dir().unwrap().components().take(2), // the prefix (C:) and root (\) components
         );
 
-        let expected = PathArc::new(current_drive_root.join("foo"))
-            .absolute()
+        let expected = PathAbs::new(current_drive_root.join("foo"))
             .unwrap();
 
         assert_eq!(actual, expected);
@@ -194,10 +190,9 @@ mod windows {
     #[test]
     fn absolute_supports_prefix_only_relative_path() {
         ::setup();
-        let actual = PathArc::new(r"C:foo").absolute().unwrap();
+        let actual = PathAbs::new(r"C:foo").unwrap();
 
-        let expected = PathArc::new(path::Path::new(r"C:").canonicalize().unwrap().join("foo"))
-            .absolute()
+        let expected = PathAbs::new(path::Path::new(r"C:").canonicalize().unwrap().join("foo"))
             .unwrap();
 
         assert_eq!(actual, expected);
@@ -206,7 +201,7 @@ mod windows {
     #[test]
     fn absolute_accepts_bogus_prefix() {
         ::setup();
-        let path = PathArc::new(r"\\?\bogus\path\").absolute().unwrap();
+        let path = PathAbs::new(r"\\?\bogus\path\").unwrap();
 
         assert_eq!(path.as_os_str(), r"\\?\bogus\path");
     }

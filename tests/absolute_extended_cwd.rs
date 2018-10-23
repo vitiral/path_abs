@@ -1,4 +1,4 @@
-//! This file tests PathArc::absolute() for Windows when the current directory
+//! This file tests PathAbs::new() for Windows when the current directory
 //! uses extended-length path syntax (like `\\?\C:\`).
 extern crate path_abs;
 extern crate tempdir;
