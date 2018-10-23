@@ -174,29 +174,6 @@ impl PathAbs {
         PathDir::from_abs(self)
     }
 
-    /// Get the parent directory of this path as a `PathDir`.
-    ///
-    /// > This does not make aditional syscalls, as the parent by definition must be a directory
-    /// > and exist.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::{PathDir, PathFile};
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let lib = PathFile::new("src/lib.rs")?;
-    /// let src = lib.parent_dir().unwrap();
-    /// assert_eq!(PathDir::new("src")?, src);
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    pub fn parent_dir(&self) -> Option<PathDir> {
-        match self.parent() {
-            Some(p) => Some(PathDir(PathAbs(PathArc::new(p)))),
-            None => None,
-        }
-    }
-
     /// Return a reference to a basic `std::path::Path`
     pub fn as_path(&self) -> &Path {
         self.as_ref()

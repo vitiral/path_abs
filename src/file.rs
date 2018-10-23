@@ -11,7 +11,7 @@ use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{FileEdit, FileRead, FileWrite, PathAbs, PathArc};
+use super::{FileEdit, FileRead, FileWrite, PathDir, PathAbs, PathArc};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -34,6 +34,29 @@ impl PathFile {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathFile> {
         let abs = PathAbs::new(path)?;
         PathFile::from_abs(abs)
+    }
+
+    /// Get the parent directory of this file as a `PathDir`.
+    ///
+    /// > This does not make aditional syscalls, as the parent by definition must be a directory
+    /// > and exist.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::{PathDir, PathFile};
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathFile::new("src/lib.rs")?;
+    /// let src = lib.parent_dir().unwrap();
+    /// assert_eq!(PathDir::new("src")?, src);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn parent_dir(&self) -> Option<PathDir> {
+        match self.parent() {
+            Some(path) => Some(PathDir(PathAbs(PathArc::new(path)))),
+            None => None,
+        }
     }
 
     /// Consume the `PathAbs` validating that the path is a file and returning `PathFile`. The file
