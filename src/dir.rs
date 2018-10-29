@@ -52,7 +52,11 @@ impl PathDir {
     /// ```
     pub fn current_dir() -> Result<PathDir> {
         let dir = ::std::env::current_dir()
-            .map_err(|err| Error::new(err, "getting current_dir", PathArc::new("$CWD")))?;
+            .map_err(|err| Error::new(
+                err,
+                "getting current_dir",
+                Path::new("$CWD").to_path_buf().into(),
+            ))?;
         PathDir::new(dir)
     }
 
@@ -115,7 +119,11 @@ impl PathDir {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => return Err(Error::new(err, "creating", PathArc::new(path))),
+                _ => return Err(Error::new(
+                    err,
+                    "creating",
+                    path.as_ref().to_path_buf().into(),
+                )),
             }
         }
         PathDir::new(path)
@@ -143,7 +151,11 @@ impl PathDir {
     /// ```
     pub fn create_all<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         fs::create_dir_all(&path)
-            .map_err(|err| Error::new(err, "creating-all", PathArc::new(&path)))?;
+            .map_err(|err| Error::new(
+                err,
+                "creating-all",
+                path.as_ref().to_path_buf().into(),
+            ))?;
         PathDir::new(path)
     }
 

@@ -281,12 +281,12 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 pub struct Error {
     io_err: io::Error,
     action: String,
-    path: PathArc,
+    path: Arc<PathBuf>,
 }
 
 impl Error {
     /// Create a new error when the path and action are known.
-    pub fn new(io_err: io::Error, action: &str, path: PathArc) -> Error {
+    pub fn new(io_err: io::Error, action: &str, path: Arc<PathBuf>) -> Error {
         Error {
             io_err: io_err,
             action: action.into(),

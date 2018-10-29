@@ -122,7 +122,11 @@ impl PathFile {
             .write(true)
             .create(true)
             .open(&path)
-            .map_err(|err| Error::new(err, "opening", PathArc::new(&path)))?;
+            .map_err(|err| Error::new(
+                err,
+                "opening",
+                path.as_ref().to_path_buf().into(),
+            ))?;
         PathFile::new(path)
     }
 

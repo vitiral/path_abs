@@ -26,7 +26,7 @@ pub fn current_dir(resolving: &PathArc) -> Result<PathArc> {
         Error::new(
             e,
             "getting current_dir while resolving absolute",
-            resolving.clone(),
+            resolving.0.clone(),
         )
     })?;
     Ok(PathArc::from(cwd))
@@ -99,7 +99,7 @@ impl PathArc {
     pub fn metadata(&self) -> Result<fs::Metadata> {
         self.0
             .metadata()
-            .map_err(|err| Error::new(err, "getting metadata of", self.clone()))
+            .map_err(|err| Error::new(err, "getting metadata of", self.0.clone()))
     }
 
     /// Queries the metadata about a file without following symlinks.
@@ -111,7 +111,7 @@ impl PathArc {
     pub fn symlink_metadata(&self) -> Result<fs::Metadata> {
         self.0
             .symlink_metadata()
-            .map_err(|err| Error::new(err, "getting symlink_metadata of", self.clone()))
+            .map_err(|err| Error::new(err, "getting symlink_metadata of", self.0.clone()))
     }
 
     /// Returns the canonical form of the path with all intermediate components normalized and
@@ -125,7 +125,7 @@ impl PathArc {
     pub fn canonicalize(&self) -> Result<PathAbs> {
         let abs = self.0
             .canonicalize()
-            .map_err(|err| Error::new(err, "canonicalizing", self.clone()))?;
+            .map_err(|err| Error::new(err, "canonicalizing", self.0.clone()))?;
 
         Ok(PathAbs(PathArc::from(abs)))
     }
@@ -140,7 +140,7 @@ impl PathArc {
     pub fn read_link(&self) -> Result<PathArc> {
         let path = self.0
             .read_link()
-            .map_err(|err| Error::new(err, "reading link", self.clone()))?;
+            .map_err(|err| Error::new(err, "reading link", self.0.clone()))?;
 
         Ok(PathArc::from(path))
     }

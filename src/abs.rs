@@ -27,9 +27,11 @@ fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
         // This prefix needs canonicalization.
         let res = path_prefix
             .canonicalize()
-            .map_err(|e|
-                Error::new(e, "canonicalizing", PathArc::new(path_prefix))
-            )?;
+            .map_err(|e| Error::new(
+                e,
+                "canonicalizing",
+                path_prefix.to_path_buf().into(),
+            ))?;
         Ok(res)
     }
 }
@@ -99,11 +101,11 @@ impl PathAbs {
                 Error::new(
                     e,
                     "getting current_dir while resolving absolute",
-                    resolvee.clone(),
+                    resolvee.0.clone(),
                 )
             })?;
             *res = cwd.canonicalize().map_err(|e| {
-                Error::new(e, "canonicalizing", PathArc::new(&cwd))
+                Error::new(e, "canonicalizing", cwd.into())
             })?;
 
             Ok(())
@@ -148,7 +150,7 @@ impl PathAbs {
                     maybe_init_res(&mut res, &path)?;
                     pop_or_error(&mut res)
                         .map_err(|e| {
-                            Error::new(e, "resolving absolute", path.clone())
+                            Error::new(e, "resolving absolute", path.0.clone())
                         })?;
                 }
 
