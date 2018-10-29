@@ -279,8 +279,22 @@ impl Deref for PathAbs {
     }
 }
 
-impl Into<PathArc> for PathAbs {
-    fn into(self) -> PathArc {
-        self.0
+impl From<PathAbs> for PathArc {
+    fn from(path: PathAbs) -> PathArc {
+        path.0
+    }
+}
+
+impl From<PathAbs> for Arc<PathBuf> {
+    fn from(path: PathAbs) -> Arc<PathBuf> {
+        let arc: PathArc = path.into();
+        arc.0
+    }
+}
+
+impl From<PathAbs> for PathBuf {
+    fn from(path: PathAbs) -> PathBuf {
+        let arc: PathArc = path.into();
+        arc.into()
     }
 }

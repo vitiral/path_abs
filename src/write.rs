@@ -196,6 +196,42 @@ impl io::Seek for FileWrite {
     }
 }
 
+impl AsRef<FileOpen> for FileWrite {
+    fn as_ref(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl AsRef<File> for FileWrite {
+    fn as_ref(&self) -> &File {
+        self.0.as_ref()
+    }
+}
+
+impl Borrow<FileOpen> for FileWrite {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl Borrow<File> for FileWrite {
+    fn borrow(&self) -> &File{
+        self.0.borrow()
+    }
+}
+
+impl<'a> Borrow<FileOpen> for &'a FileWrite {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl<'a> Borrow<File> for &'a FileWrite {
+    fn borrow(&self) -> &File{
+        self.0.borrow()
+    }
+}
+
 impl Deref for FileWrite {
     type Target = FileOpen;
 
@@ -204,8 +240,14 @@ impl Deref for FileWrite {
     }
 }
 
-impl Into<File> for FileWrite {
-    fn into(self) -> File {
-        self.0.into()
+impl From<FileWrite> for FileOpen {
+    fn from(orig: FileWrite) -> FileOpen {
+        orig.0
+    }
+}
+
+impl From<FileWrite> for File {
+    fn from(orig: FileWrite) -> File {
+        orig.0.into()
     }
 }

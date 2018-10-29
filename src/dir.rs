@@ -460,49 +460,30 @@ impl Deref for PathDir {
     }
 }
 
-impl Into<PathAbs> for PathDir {
-    /// Downgrades the `PathDir` into a `PathAbs`
-    ///
-    /// # Examples
-    /// ```
-    /// # extern crate path_abs;
-    /// use std::path::PathBuf;
-    /// use path_abs::{PathDir, PathAbs};
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let dir = PathDir::new("src")?;
-    /// let abs: PathAbs = dir.into();
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    fn into(self) -> PathAbs {
-        self.0
+impl From<PathDir> for PathAbs {
+    fn from(path: PathDir) -> PathAbs {
+        path.0
     }
 }
 
-impl Into<PathArc> for PathDir {
-    /// Downgrades the `PathDir` into a `PathArc`
-    fn into(self) -> PathArc {
-        (self.0).0
+impl From<PathDir> for PathArc {
+    fn from(path: PathDir) -> PathArc {
+        let abs: PathAbs = path.into();
+        abs.0
     }
 }
 
-impl Into<PathBuf> for PathDir {
-    /// Downgrades the `PathDir` into a `PathBuf`. Avoids a clone if this is the only reference.
-    ///
-    /// # Examples
-    /// ```
-    /// # extern crate path_abs;
-    /// use path_abs::PathDir;
-    /// use std::path::PathBuf;
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let dir = PathDir::new("src")?;
-    /// let buf: PathBuf = dir.into();
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    fn into(self) -> PathBuf {
-        let arc: PathArc = self.into();
-        arc.into()
+impl From<PathDir> for Arc<PathBuf> {
+    fn from(path: PathDir) -> Arc<PathBuf> {
+        let abs: PathAbs = path.into();
+        abs.into()
+    }
+}
+
+impl From<PathDir> for PathBuf {
+    fn from(path: PathDir) -> PathBuf {
+        let abs: PathAbs = path.into();
+        abs.into()
     }
 }
 
