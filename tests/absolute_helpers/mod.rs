@@ -4,6 +4,7 @@ use std::io;
 use std::path;
 
 use path_abs::PathAbs;
+use path_abs::PathInfo;
 
 use tempdir::TempDir;
 
@@ -105,6 +106,7 @@ fn absolute_path_interprets_relative_to_current_directory() {
 
 #[cfg(unix)]
 mod unix {
+    use path_abs::PathInfo;
     use super::*;
 
     #[test]

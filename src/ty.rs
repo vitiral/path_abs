@@ -8,7 +8,7 @@
 use std_prelude::*;
 
 use super::Result;
-use super::{PathAbs, PathArc, PathDir, PathFile};
+use super::{PathAbs, PathDir, PathFile, PathInfo};
 
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serialize", serde(tag = "type", content = "path", rename_all = "lowercase"))]
@@ -137,13 +137,6 @@ impl AsRef<PathAbs> for PathType {
     }
 }
 
-impl AsRef<PathArc> for PathType {
-    fn as_ref(&self) -> &PathArc {
-        let r: &PathAbs = self.as_ref();
-        r.as_ref()
-    }
-}
-
 impl AsRef<Path> for PathType {
     fn as_ref(&self) -> &Path {
         let r: &PathAbs = self.as_ref();
@@ -173,12 +166,6 @@ impl Borrow<PathAbs> for PathType {
     }
 }
 
-impl Borrow<PathArc> for PathType {
-    fn borrow(&self) -> &PathArc {
-        self.as_ref()
-    }
-}
-
 impl Borrow<Path> for PathType {
     fn borrow(&self) -> &Path {
         self.as_ref()
@@ -193,12 +180,6 @@ impl Borrow<PathBuf> for PathType {
 
 impl<'a> Borrow<PathAbs> for &'a PathType {
     fn borrow(&self) -> &PathAbs {
-        self.as_ref()
-    }
-}
-
-impl<'a> Borrow<PathArc> for &'a PathType {
-    fn borrow(&self) -> &PathArc {
         self.as_ref()
     }
 }
@@ -221,13 +202,6 @@ impl From<PathType> for PathAbs {
             PathType::File(p) => p.into(),
             PathType::Dir(p) => p.into(),
         }
-    }
-}
-
-impl From<PathType> for PathArc {
-    fn from(path: PathType) -> PathArc {
-        let abs: PathAbs = path.into();
-        abs.into()
     }
 }
 

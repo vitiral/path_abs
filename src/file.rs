@@ -11,7 +11,7 @@ use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{FileEdit, FileRead, FileWrite, PathDir, PathAbs, PathArc};
+use super::{FileEdit, FileRead, FileWrite, PathInfo, PathDir, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -54,8 +54,8 @@ impl PathFile {
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
-            Some(path) => Some(PathDir(PathAbs(PathArc::new(path)))),
-            None => None,
+            Ok(path) => Some(PathDir(PathAbs(Arc::new(path.to_path_buf())))),
+            Err(_) => None,
         }
     }
 
@@ -346,7 +346,7 @@ impl PathFile {
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
-    /// use path_abs::PathFile;
+    /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
@@ -425,7 +425,7 @@ impl PathFile {
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
-    /// use path_abs::PathFile;
+    /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
@@ -480,12 +480,6 @@ impl AsRef<PathAbs> for PathFile {
     }
 }
 
-impl AsRef<PathArc> for PathFile {
-    fn as_ref(&self) -> &PathArc {
-        &self.0
-    }
-}
-
 impl AsRef<Path> for PathFile {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
@@ -504,12 +498,6 @@ impl Borrow<PathAbs> for PathFile {
     }
 }
 
-impl Borrow<PathArc> for PathFile {
-    fn borrow(&self) -> &PathArc {
-        self.as_ref()
-    }
-}
-
 impl Borrow<Path> for PathFile {
     fn borrow(&self) -> &Path {
         self.as_ref()
@@ -524,12 +512,6 @@ impl Borrow<PathBuf> for PathFile {
 
 impl<'a> Borrow<PathAbs> for &'a PathFile {
     fn borrow(&self) -> &PathAbs {
-        self.as_ref()
-    }
-}
-
-impl<'a> Borrow<PathArc> for &'a PathFile {
-    fn borrow(&self) -> &PathArc {
         self.as_ref()
     }
 }
@@ -557,13 +539,6 @@ impl Deref for PathFile {
 impl From<PathFile> for PathAbs {
     fn from(path: PathFile) -> PathAbs {
         path.0
-    }
-}
-
-impl From<PathFile> for PathArc {
-    fn from(path: PathFile) -> PathArc {
-        let abs: PathAbs = path.into();
-        abs.into()
     }
 }
 

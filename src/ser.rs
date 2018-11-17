@@ -8,114 +8,82 @@
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use stfu8;
 use std::string::ToString;
-use std::str::FromStr;
+use std_prelude::*;
 
-#[cfg(unix)]
-use std::ffi::OsStr;
-#[cfg(unix)]
-use std::os::unix::ffi::OsStrExt;
-
-#[cfg(windows)]
 use std::ffi::OsString;
+#[cfg(unix)]
+use std::os::unix::ffi::{OsStrExt, OsStringExt};
 #[cfg(windows)]
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
-use super::{PathAbs, PathArc, PathDir, PathFile};
+use super::{PathAbs, PathDir, PathFile};
 
-macro_rules! map_err {
-    ($res: expr) => {{
-        $res.map_err(|err| serde::de::Error::custom(&err.to_string()))
-    }};
+trait ToStfu8 {
+    fn to_stfu8(&self) -> String;
 }
 
-impl PathArc {
+trait FromStfu8: Sized {
+    fn from_stfu8(s: &str) -> Result<Self, stfu8::DecodeError>;
+}
+
+impl<T> ToStfu8 for T where T: Borrow<PathBuf> {
     #[cfg(unix)]
-    pub(crate) fn to_stfu8(&self) -> String {
-        let bytes = self.as_os_str().as_bytes();
+    fn to_stfu8(&self) -> String {
+        let bytes = self.borrow().as_os_str().as_bytes();
         stfu8::encode_u8(bytes)
     }
 
     #[cfg(windows)]
-    pub(crate) fn to_stfu8(&self) -> String {
-        let wide: Vec<u16> = self.as_os_str().encode_wide().collect();
+    fn to_stfu8(&self) -> String {
+        let wide: Vec<u16> = self.borrow().as_os_str().encode_wide().collect();
         stfu8::encode_u16(&wide)
     }
+}
 
+impl <T> FromStfu8 for T where T: From<PathBuf> {
     #[cfg(unix)]
-    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+    fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u8(s)?;
-        let os_str = OsStr::from_bytes(&raw_path);
-        Ok(PathArc::new(os_str))
+        let os_str = OsString::from_vec(raw_path);
+        let pathbuf: PathBuf = os_str.into();
+        Ok(pathbuf.into())
     }
 
     #[cfg(windows)]
-    pub(crate) fn from_stfu8(s: &str) -> Result<PathArc, stfu8::DecodeError> {
+    fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u16(&s)?;
         let os_str = OsString::from_wide(&raw_path);
-        Ok(PathArc::new(os_str))
+        let pathbuf: PathBuf = os_str.into();
+        Ok(pathbuf.into())
     }
 }
 
-impl ToString for PathArc {
-    /// Convert the `PathArc` into an STFU8 `String`.
-    fn to_string(&self) -> String {
-        self.to_stfu8()
-    }
+macro_rules! stfu8_serialize {
+    ($name:ident) => {
+        impl Serialize for $name {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                serializer.serialize_str(&self.to_stfu8())
+            }
+        }
+    };
 }
 
-impl FromStr for PathArc {
-    type Err = stfu8::DecodeError;
-
-    /// Convert STFU8 `str` to a `PathArc`.
-    fn from_str(s: &str) -> Result<PathArc, stfu8::DecodeError> {
-        PathArc::from_stfu8(s)
-    }
-}
-
-impl Serialize for PathArc {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.to_stfu8())
-    }
-}
-
-impl<'de> Deserialize<'de> for PathArc {
-    fn deserialize<D>(deserializer: D) -> Result<PathArc, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        map_err!(PathArc::from_stfu8(&s))
-    }
-}
-
-impl Serialize for PathAbs {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
-    }
-}
+stfu8_serialize!(PathAbs);
+stfu8_serialize!(PathFile);
+stfu8_serialize!(PathDir);
 
 impl<'de> Deserialize<'de> for PathAbs {
     fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let arc = PathArc::deserialize(deserializer)?;
-        map_err!(PathAbs::new(arc))
-    }
-}
-
-impl Serialize for PathFile {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
+        let s = String::deserialize(deserializer)?;
+        let path = PathBuf::from_stfu8(&s)
+            .map_err(|err| serde::de::Error::custom(&err.to_string()))?;
+        Ok(PathAbs(Arc::new(path)))
     }
 }
 
@@ -125,16 +93,8 @@ impl<'de> Deserialize<'de> for PathFile {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathFile::from_abs(abs).map_err(serde::de::Error::custom)
-    }
-}
-
-impl Serialize for PathDir {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.0.serialize(serializer)
+        PathFile::from_abs(abs)
+            .map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 
@@ -144,13 +104,15 @@ impl<'de> Deserialize<'de> for PathDir {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathDir::from_abs(abs).map_err(serde::de::Error::custom)
+        PathDir::from_abs(abs)
+            .map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PathDir, PathFile, PathType};
+    use super::super::{PathDir, PathFile, PathType, PathOps};
+    use super::*;
 
     #[cfg(unix)]
     static SERIALIZED: &str = "[\
@@ -174,9 +136,9 @@ mod tests {
         let tmp_dir = TempDir::new("example").expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
-        let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
-        let bar_dir = PathDir::create(tmp_abs.join("bar")).expect("bar");
-        let foo_bar_dir = PathDir::create_all(tmp_abs.join("foo").join("bar")).expect("foo/bar");
+        let foo = PathFile::create(tmp_abs.concat("foo.txt").unwrap()).expect("foo.txt");
+        let bar_dir = PathDir::create(tmp_abs.concat("bar").unwrap()).expect("bar");
+        let foo_bar_dir = PathDir::create_all(tmp_abs.concat("foo").unwrap().concat("bar").unwrap()).expect("foo/bar");
 
         let expected = vec![
             PathType::File(foo),

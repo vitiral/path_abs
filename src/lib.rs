@@ -52,12 +52,8 @@
 //!
 //! ## Exported Path Types
 //!
-//! These are the exported Path types. All of them are absolute except for `PathArc`, which
-//! is just an `Arc<PathBuf>` with methods that have better error reporting.
+//! These are the exported Path types. All of them are absolute.
 //!
-//! - [`PathArc`](struct.PathArc.html): a reference counted `PathBuf` with methods reimplemented
-//!   with better error messages. Use this for a generic serializable path that may or may
-//!   not exist.
 //! - [`PathAbs`](struct.PathAbs.html): a reference counted absolute (_not necessarily_
 //!   canonicalized) path that is not necessarily guaranteed to exist.
 //! - [`PathFile`](struct.PathFile.html): a `PathAbs` that is guaranteed (at instantiation) to
@@ -122,6 +118,8 @@
 //!     PathDir,   // absolute path to a directory
 //!     PathFile,  // absolute path to a file
 //!     PathType,  // enum of Dir or File
+//!     PathInfo,  // trait for query methods
+//!     PathOps,   // trait for methods that make new paths
 //!     FileRead,  // Open read-only file handler
 //!     FileWrite, // Open write-only file handler
 //!     FileEdit,  // Open read/write file handler
@@ -134,9 +132,9 @@
 //!
 //! // Create your paths
 //! let project = PathDir::create_all(example)?;
-//! let src = PathDir::create(project.join("src"))?;
-//! let lib = PathFile::create(src.join("lib.rs"))?;
-//! let cargo = PathFile::create(project.join("Cargo.toml"))?;
+//! let src = PathDir::create(project.concat("src")?)?;
+//! let lib = PathFile::create(src.concat("lib.rs")?)?;
+//! let cargo = PathFile::create(project.concat("Cargo.toml")?)?;
 //!
 //! // Write the templates
 //! lib.write_str(r#"
@@ -231,7 +229,6 @@ use std::path;
 use std_prelude::*;
 
 mod abs;
-mod arc;
 mod dir;
 mod edit;
 mod file;
@@ -243,7 +240,6 @@ mod write;
 mod read;
 
 pub use abs::PathAbs;
-pub use arc::{current_dir, PathArc};
 pub use dir::{ListDir, PathDir};
 pub use file::PathFile;
 pub use ty::PathType;
@@ -625,7 +621,7 @@ impl PathMut for PathBuf {
         }
 
         // Clobber ourselves with the new value.
-        *self = res.into();
+        *self = res;
     }
 
     fn set_file_name<S: AsRef<ffi::OsStr>>(&mut self, file_name: S) {
@@ -797,7 +793,8 @@ mod tests {
         let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
         {
-            let foo = PathFile::create(tmp_abs.join("foo.txt")).expect("foo.txt");
+            let foo_path = tmp_abs.concat("foo.txt").expect("path foo.txt");
+            let foo = PathFile::create(foo_path).expect("create foo.txt");
             foo.clone().remove().unwrap();
             let pat = if cfg!(unix) {
                 format!(
