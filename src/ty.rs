@@ -215,52 +215,32 @@ impl<'a> Borrow<PathBuf> for &'a PathType {
     }
 }
 
-impl Into<PathAbs> for PathType {
-    /// Downgrades the `PathType` into a `PathAbs`
-    ///
-    /// # Examples
-    /// ```
-    /// # extern crate path_abs;
-    /// use std::path::PathBuf;
-    /// use path_abs::{PathType, PathAbs};
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let ty = PathType::new("src/lib.rs")?;
-    /// let abs: PathAbs = ty.into();
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    fn into(self) -> PathAbs {
-        match self {
+impl From<PathType> for PathAbs {
+    fn from(path: PathType) -> PathAbs {
+        match path {
             PathType::File(p) => p.into(),
             PathType::Dir(p) => p.into(),
         }
     }
 }
 
-impl Into<PathArc> for PathType {
-    /// Downgrades the `PathType` into a `PathArc`
-    fn into(self) -> PathArc {
-        let abs: PathAbs = self.into();
+impl From<PathType> for PathArc {
+    fn from(path: PathType) -> PathArc {
+        let abs: PathAbs = path.into();
         abs.into()
     }
 }
 
-impl Into<PathBuf> for PathType {
-    /// Downgrades the `PathType` into a `PathBuf`. Avoids a clone if this is the only reference.
-    ///
-    /// # Examples
-    /// ```
-    /// # extern crate path_abs;
-    /// use path_abs::PathType;
-    /// use std::path::PathBuf;
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let ty = PathType::new("src/lib.rs")?;
-    /// let buf: PathBuf = ty.into();
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    fn into(self) -> PathBuf {
-        let arc: PathArc = self.into();
-        arc.into()
+impl From<PathType> for Arc<PathBuf> {
+    fn from(path: PathType) -> Arc<PathBuf> {
+        let abs: PathAbs = path.into();
+        abs.into()
+    }
+}
+
+impl From<PathType> for PathBuf {
+    fn from(path: PathType) -> PathBuf {
+        let abs: PathAbs = path.into();
+        abs.into()
     }
 }

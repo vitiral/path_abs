@@ -221,33 +221,27 @@ impl Deref for PathArc {
     }
 }
 
-impl From<PathBuf> for PathArc {
-    /// Instantiate a new `PathArc` from a `PathBuf`.
-    fn from(path: PathBuf) -> PathArc {
-        PathArc(Arc::new(path))
+impl From<Arc<PathBuf>> for PathArc {
+    fn from(path: Arc<PathBuf>) -> PathArc {
+        PathArc(path)
     }
 }
 
-impl Into<PathBuf> for PathArc {
-    /// If there is only one reference to the `PathArc`, returns
-    /// the inner `PathBuf`. Otherwise clones the inner `PathBuf`.
-    ///
-    /// This is useful when you really want a `PathBuf`, especially
-    /// when the `PathArc` was only recently created.
-    ///
-    /// # Examples
-    /// ```
-    /// # extern crate path_abs;
-    /// use path_abs::PathArc;
-    /// use std::path::PathBuf;
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let base = PathArc::new("base");
-    /// let foo: PathBuf = base.join("foo.txt").into();
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    fn into(self) -> PathBuf {
-        match Arc::try_unwrap(self.0) {
+impl From<PathBuf> for PathArc {
+    fn from(path: PathBuf) -> PathArc {
+        Arc::new(path).into()
+    }
+}
+
+impl From<PathArc> for Arc<PathBuf> {
+    fn from(path: PathArc) -> Arc<PathBuf> {
+        path.0
+    }
+}
+
+impl From<PathArc> for PathBuf {
+    fn from(path: PathArc) -> PathBuf {
+        match Arc::try_unwrap(path.0) {
             Ok(p) => p,
             Err(inner) => inner.as_ref().clone(),
         }

@@ -99,6 +99,42 @@ impl io::Seek for FileRead {
     }
 }
 
+impl AsRef<FileOpen> for FileRead {
+    fn as_ref(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl AsRef<File> for FileRead {
+    fn as_ref(&self) -> &File {
+        self.0.as_ref()
+    }
+}
+
+impl Borrow<FileOpen> for FileRead {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl Borrow<File> for FileRead {
+    fn borrow(&self) -> &File{
+        self.0.borrow()
+    }
+}
+
+impl<'a> Borrow<FileOpen> for &'a FileRead {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl<'a> Borrow<File> for &'a FileRead {
+    fn borrow(&self) -> &File{
+        self.0.borrow()
+    }
+}
+
 impl Deref for FileRead {
     type Target = FileOpen;
 
@@ -107,8 +143,14 @@ impl Deref for FileRead {
     }
 }
 
-impl Into<File> for FileRead {
-    fn into(self) -> File {
-        self.0.into()
+impl From<FileRead> for FileOpen {
+    fn from(orig: FileRead) -> FileOpen {
+        orig.0
+    }
+}
+
+impl From<FileRead> for File {
+    fn from(orig: FileRead) -> File {
+        orig.0.into()
     }
 }

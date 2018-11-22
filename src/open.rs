@@ -93,8 +93,26 @@ impl fmt::Debug for FileOpen {
     }
 }
 
-impl Into<fs::File> for FileOpen {
-    fn into(self) -> fs::File {
-        self.file
+impl AsRef<fs::File> for FileOpen {
+    fn as_ref(&self) -> &fs::File {
+        &self.file
+    }
+}
+
+impl Borrow<fs::File> for FileOpen {
+    fn borrow(&self) -> &fs::File {
+        &self.file
+    }
+}
+
+impl<'a> Borrow<fs::File> for &'a FileOpen {
+    fn borrow(&self) -> &fs::File {
+        &self.file
+    }
+}
+
+impl From<FileOpen> for fs::File {
+    fn from(orig: FileOpen) -> fs::File {
+        orig.file
     }
 }

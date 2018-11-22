@@ -222,6 +222,42 @@ impl io::Seek for FileEdit {
     }
 }
 
+impl AsRef<FileOpen> for FileEdit {
+    fn as_ref(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl AsRef<File> for FileEdit {
+    fn as_ref(&self) -> &File {
+        &self.0.as_ref()
+    }
+}
+
+impl Borrow<FileOpen> for FileEdit {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl Borrow<File> for FileEdit {
+    fn borrow(&self) -> &File {
+        &self.0.borrow()
+    }
+}
+
+impl<'a> Borrow<FileOpen> for &'a FileEdit {
+    fn borrow(&self) -> &FileOpen {
+        &self.0
+    }
+}
+
+impl<'a> Borrow<File> for &'a FileEdit {
+    fn borrow(&self) -> &File {
+        &self.0.borrow()
+    }
+}
+
 impl Deref for FileEdit {
     type Target = FileOpen;
 
@@ -230,8 +266,14 @@ impl Deref for FileEdit {
     }
 }
 
-impl Into<File> for FileEdit {
-    fn into(self) -> File {
-        self.0.into()
+impl From<FileEdit> for FileOpen {
+    fn from(orig: FileEdit) -> FileOpen {
+        orig.0
+    }
+}
+
+impl From<FileEdit> for File {
+    fn from(orig: FileEdit) -> File {
+        orig.0.into()
     }
 }
