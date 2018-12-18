@@ -65,7 +65,12 @@ impl PathArc {
     ///
     /// [0]: https://doc.rust-lang.org/std/path/struct.PathBuf.html#method.join
     pub fn join<P: AsRef<Path>>(&self, path: P) -> PathArc {
-        PathArc::from(self.0.join(path))
+        let mut joined_path = self.as_path().to_path_buf();
+        // Issue #34: Convert '/' into '\\' for Windows
+        for c in path.as_ref().components() {
+            joined_path.push(c);
+        }
+        PathArc::from(joined_path)
     }
 
     /// Creates an owned `PathArc` like self but with the given file name.
