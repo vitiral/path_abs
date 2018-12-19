@@ -5,10 +5,11 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+use std::ffi;
 use std_prelude::*;
 
 use super::Result;
-use super::{PathAbs, PathDir, PathFile, PathInfo};
+use super::{PathAbs, PathDir, PathFile, PathInfo, PathOps};
 
 #[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serialize", serde(tag = "type", content = "path", rename_all = "lowercase"))]
@@ -216,5 +217,30 @@ impl From<PathType> for PathBuf {
     fn from(path: PathType) -> PathBuf {
         let abs: PathAbs = path.into();
         abs.into()
+    }
+}
+
+impl PathOps for PathType {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        match self {
+            PathType::File(p) => p.concat(path),
+            PathType::Dir(p) => p.concat(path),
+        }
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        match self {
+            PathType::File(p) => p.with_file_name(file_name),
+            PathType::Dir(p) => p.with_file_name(file_name),
+        }
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        match self {
+            PathType::File(p) => p.with_extension(extension),
+            PathType::Dir(p) => p.with_extension(extension),
+        }
     }
 }

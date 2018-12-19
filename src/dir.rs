@@ -6,6 +6,7 @@
  * copied, modified, or distributed except according to those terms.
  */
 //! Paths to Directories and associated methods.
+use std::ffi;
 use std::fs;
 use std::fmt;
 use std::io;
@@ -505,6 +506,22 @@ mod tests {
         // just ensure that this compiles
         let _: PathAbs = foo_dir.into();
         let _: PathAbs = bar_file.into();
+    }
+}
+
+impl PathOps for PathDir {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        Ok(self.0.concat(path)?)
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        self.0.with_file_name(file_name)
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        self.0.with_extension(extension)
     }
 }
 

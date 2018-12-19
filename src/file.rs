@@ -5,13 +5,14 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+use std::ffi;
 use std::fs;
 use std::fmt;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{FileEdit, FileRead, FileWrite, PathInfo, PathDir, PathAbs};
+use super::{FileEdit, FileRead, FileWrite, PathInfo, PathOps, PathDir, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -553,6 +554,22 @@ impl From<PathFile> for PathBuf {
     fn from(path: PathFile) -> PathBuf {
         let abs: PathAbs = path.into();
         abs.into()
+    }
+}
+
+impl PathOps for PathFile {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        Ok(self.0.concat(path)?)
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        self.0.with_file_name(file_name)
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        self.0.with_extension(extension)
     }
 }
 
