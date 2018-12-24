@@ -504,7 +504,8 @@ pub trait PathMut: PathInfo {
     /// Appends `path` to this path.
     ///
     /// Note that this method represents pure concatenation, not "adjoinment"
-    /// like [`PathBuf::push`].
+    /// like [`PathBuf::push`], so absolute paths won't wholly replace the
+    /// current path.
     ///
     /// # Errors
     ///
@@ -673,7 +674,8 @@ pub trait PathOps: PathInfo {
     /// Returns a new value representing the concatenation of two paths.
     ///
     /// Note that this method represents pure concatenation, not "adjoinment"
-    /// like [`PathBuf::join`].
+    /// like [`PathBuf::join`], so absolute paths won't wholly replace the
+    /// current path.
     ///
     /// # Errors
     ///
