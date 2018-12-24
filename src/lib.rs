@@ -547,6 +547,7 @@ pub trait PathMut: PathInfo {
     ///
     /// assert_eq!(install_path.as_path(), Path::new("/usr/local/bin"));
     /// # Ok(()) }
+    /// ```
     fn truncate_to_parent(&mut self) -> Result<()>;
 
     /// Removes all components after the root, if any.
@@ -564,6 +565,7 @@ pub trait PathMut: PathInfo {
     /// somepath.truncate_to_root();
     ///
     /// assert_eq!(somepath.as_path(), Path::new(r"C:\"));
+    /// ```
     fn truncate_to_root(&mut self);
 
     fn set_file_name<S: AsRef<ffi::OsStr>>(&mut self, file_name: S);
@@ -693,7 +695,7 @@ pub trait PathOps: PathInfo {
     ///             if maybe_config.is_file() { return Some(maybe_config); }
     ///         }
     ///     }
-    //
+    ///
     ///     None
     /// }
     /// ```
