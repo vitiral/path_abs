@@ -353,7 +353,8 @@ impl From<Error> for io::Error {
 /// noted.
 ///
 /// As a general rule, methods that can return an error will return a rich
-/// [`path_abs::Error`] instead of a [`std::io::Error`].
+/// [`path_abs::Error`] instead of a [`std::io::Error`] (although it will
+/// automatically convert into a `std::io::Error` with `?` if needed).
 ///
 /// [`path_abs::Error`]: struct.Error.html
 /// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
@@ -499,7 +500,8 @@ impl<T> PathInfo for T where T: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {}
 /// a file, but the path to a directory.
 ///
 /// As a general rule, methods that can return an error will return a rich
-/// [`path_abs::Error`] instead of a [`std::io::Error`].
+/// [`path_abs::Error`] instead of a [`std::io::Error`] (although it will
+/// automatically convert into a `std::io::Error` with `?` if needed).
 pub trait PathMut: PathInfo {
     /// Appends `path` to this path.
     ///
@@ -658,7 +660,8 @@ impl PathMut for Arc<PathBuf> {
 ///
 /// Like the methods of [`PathInfo`] and [`PathMut`], these methods are similar
 /// to ones from the standard library's [`PathBuf`] but may return a rich
-/// [`path_abs::Error`] instead of a [`std::io::Error`].
+/// [`path_abs::Error`] instead of a [`std::io::Error`] (although it will
+/// automatically convert into a `std::io::Error` with `?` if needed).
 ///
 /// Unlike the methods of [`PathInfo`] and [`PathMut`], different types that
 /// implement this trait may have different return types.
