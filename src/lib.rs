@@ -358,42 +358,44 @@ impl From<Error> for io::Error {
 ///
 /// [`path_abs::Error`]: struct.Error.html
 /// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
-pub trait PathInfo: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
-    fn as_path(&self) -> &Path { PathBuf::as_path(self.borrow()) }
+pub trait PathInfo {
+    fn as_path(&self) -> &Path;
 
-    fn as_os_str(&self) -> &ffi::OsStr { Path::as_os_str(self.borrow()) }
+    fn to_arc_pathbuf(&self) -> Arc<PathBuf>;
 
-    fn to_str(&self) -> Option<&str> { Path::to_str(self.borrow()) }
+    fn as_os_str(&self) -> &ffi::OsStr { Path::as_os_str(self.as_path()) }
 
-    fn to_string_lossy(&self) -> Cow<str> { Path::to_string_lossy(self.borrow()) }
+    fn to_str(&self) -> Option<&str> { Path::to_str(self.as_path()) }
 
-    fn is_absolute(&self) -> bool { Path::is_absolute(self.borrow()) }
+    fn to_string_lossy(&self) -> Cow<str> { Path::to_string_lossy(self.as_path()) }
 
-    fn is_relative(&self) -> bool { Path::is_relative(self.borrow()) }
+    fn is_absolute(&self) -> bool { Path::is_absolute(self.as_path()) }
 
-    fn has_root(&self) -> bool { Path::has_root(self.borrow()) }
+    fn is_relative(&self) -> bool { Path::is_relative(self.as_path()) }
 
-    fn ancestors(&self) -> path::Ancestors { Path::ancestors(self.borrow()) }
+    fn has_root(&self) -> bool { Path::has_root(self.as_path()) }
 
-    fn file_name(&self) -> Option<&ffi::OsStr> { Path::file_name(self.borrow()) }
+    fn ancestors(&self) -> path::Ancestors { Path::ancestors(self.as_path()) }
+
+    fn file_name(&self) -> Option<&ffi::OsStr> { Path::file_name(self.as_path()) }
 
     fn starts_with<P: AsRef<Path>>(&self, base: P) -> bool {
-        Path::starts_with(self.borrow(), base)
+        Path::starts_with(self.as_path(), base)
     }
 
     fn ends_with<P: AsRef<Path>>(&self, base: P) -> bool {
-        Path::ends_with(self.borrow(), base)
+        Path::ends_with(self.as_path(), base)
     }
 
-    fn file_stem(&self) -> Option<&ffi::OsStr> { Path::file_stem(self.borrow()) }
+    fn file_stem(&self) -> Option<&ffi::OsStr> { Path::file_stem(self.as_path()) }
 
-    fn extension(&self) -> Option<&ffi::OsStr> { Path::extension(self.borrow()) }
+    fn extension(&self) -> Option<&ffi::OsStr> { Path::extension(self.as_path()) }
 
-    fn components(&self) -> path::Components { Path::components(self.borrow()) }
+    fn components(&self) -> path::Components { Path::components(self.as_path()) }
 
-    fn iter(&self) -> path::Iter { Path::iter(self.borrow()) }
+    fn iter(&self) -> path::Iter { Path::iter(self.as_path()) }
 
-    fn display(&self) -> path::Display { Path::display(self.borrow()) }
+    fn display(&self) -> path::Display { Path::display(self.as_path()) }
 
     /// Queries the file system to get information about a file, directory, etc.
     ///
@@ -403,11 +405,11 @@ pub trait PathInfo: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
     /// [`path_abs::Error`]: struct.Error.html
     /// [`std::path::Path::metadata()`]: https://doc.rust-lang.org/stable/std/path/struct.Path.html#method.metadata
     fn metadata(&self) -> Result<fs::Metadata> {
-        Path::metadata(self.borrow())
+        Path::metadata(self.as_path())
             .map_err(|err| Error::new(
                 err,
                 "getting metadata of",
-                self.clone().into(),
+                self.to_arc_pathbuf(),
             ))
     }
 
@@ -419,19 +421,19 @@ pub trait PathInfo: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
     /// [`path_abs::Error`]: struct.Error.html
     /// [`std::path::Path::symlink_metadata()`]: https://doc.rust-lang.org/stable/std/path/struct.Path.html#method.symlink_metadata
     fn symlink_metadata(&self) -> Result<fs::Metadata> {
-        Path::symlink_metadata(self.borrow())
+        Path::symlink_metadata(self.as_path())
             .map_err(|err| Error::new(
                 err,
                 "getting symlink metadata of",
-                self.clone().into(),
+                self.to_arc_pathbuf(),
             ))
     }
 
-    fn exists(&self) -> bool { Path::exists(self.borrow()) }
+    fn exists(&self) -> bool { Path::exists(self.as_path()) }
 
-    fn is_file(&self) -> bool { Path::is_file(self.borrow()) }
+    fn is_file(&self) -> bool { Path::is_file(self.as_path()) }
 
-    fn is_dir(&self) -> bool { Path::is_dir(self.borrow()) }
+    fn is_dir(&self) -> bool { Path::is_dir(self.as_path()) }
 
     /// Reads a symbolic link, returning the path that the link points to.
     ///
@@ -439,33 +441,31 @@ pub trait PathInfo: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
     /// rich [`path_abs::Error`] when a problem is encountered.
     ///
     /// [`path_abs::Error`]: struct.Error.html
-    /// [`std::path::Path::read_link()`]: https://doc.rust-lang.org/stable/std/path/struct.Path.html#method.read_link
+    /// [`std::path::Pathdoc.rust-lang.org/stable/std/path/struct.Path.html#method.read_link
     fn read_link(&self) -> Result<PathBuf> {
-        Path::read_link(self.borrow())
+        Path::read_link(self.as_path())
             .map_err(|err| Error::new(
                 err,
                 "reading link target of",
-                self.clone().into(),
+                self.to_arc_pathbuf(),
             ))
     }
 
     /// Returns the canonical, absolute form of the path with all intermediate
     /// components normalized and symbolic links resolved.
     ///
-    /// The same as [`std::path::Path::canonicalize()`], except:
-    ///
-    ///   - On success, returns a `path_abs::PathAbs` instead of a `PathBuf`
+    /// The same as [`std::path::Path::canonicalize()`], ///   - On success, returns a `path_abs::PathAbs` instead of a `PathBuf`
     ///   - returns a rich [`path_abs::Error`] when a problem is encountered
     ///
     /// [`path_abs::Error`]: struct.Error.html
     /// [`std::path::Path::canonicalize()`]: https://doc.rust-lang.org/stable/std/path/struct.Path.html#method.canonicalize
     fn canonicalize(&self) -> Result<PathAbs> {
-        Path::canonicalize(self.borrow())
+        Path::canonicalize(self.as_path())
             .map(|path| PathAbs(path.into()))
             .map_err(|err| Error::new(
                 err,
                 "canonicalizing",
-                self.clone().into(),
+                self.to_arc_pathbuf(),
             ))
     }
 
@@ -477,20 +477,28 @@ pub trait PathInfo: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
     /// [`path_abs::Error`]: struct.Error.html
     /// [`std::path::Path::parent()`]: https://doc.rust-lang.org/stable/std/path/struct.Path.html#method.parent
     fn parent(&self) -> Result<&Path> {
-        let parent_path = Path::parent(self.borrow());
+        let parent_path = Path::parent(self.as_path());
         if let Some(p) = parent_path {
             Ok(p)
         } else {
             Err(Error::new(
                 io::Error::new(io::ErrorKind::NotFound, "path has no parent"),
                 "truncating to parent",
-                self.clone().into(),
+                self.to_arc_pathbuf(),
             ))
         }
     }
 }
 
-impl<T> PathInfo for T where T: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {}
+impl<T> PathInfo for T where T: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>> {
+    fn as_path(&self) -> &Path { PathBuf::as_path(self.borrow()) }
+    fn to_arc_pathbuf(&self) -> Arc<PathBuf> { self.clone().into() }
+}
+
+impl PathInfo for Path {
+    fn as_path(&self) -> &Path { &self }
+    fn to_arc_pathbuf(&self) -> Arc<PathBuf> { self.to_path_buf().into() }
+}
 
 /// Methods that modify a path.
 ///
