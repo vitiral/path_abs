@@ -454,7 +454,8 @@ pub trait PathInfo {
     /// Returns the canonical, absolute form of the path with all intermediate
     /// components normalized and symbolic links resolved.
     ///
-    /// The same as [`std::path::Path::canonicalize()`], ///   - On success, returns a `path_abs::PathAbs` instead of a `PathBuf`
+    /// The same as [`std::path::Path::canonicalize()`],
+    ///   - On success, returns a `path_abs::PathAbs` instead of a `PathBuf`
     ///   - returns a rich [`path_abs::Error`] when a problem is encountered
     ///
     /// [`path_abs::Error`]: struct.Error.html
