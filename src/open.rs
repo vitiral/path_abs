@@ -12,7 +12,7 @@ use std::fmt;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{PathArc, PathFile};
+use super::PathFile;
 
 /// **INTERNAL TYPE: do not use directly.**
 ///
@@ -27,7 +27,11 @@ impl FileOpen {
     pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> Result<FileOpen> {
         let file = options
             .open(&path)
-            .map_err(|err| Error::new(err, "opening", PathArc::new(&path)))?;
+            .map_err(|err| Error::new(
+                err,
+                "opening",
+                path.as_ref().to_path_buf().into(),
+            ))?;
 
         let path = PathFile::new(path)?;
         Ok(FileOpen {

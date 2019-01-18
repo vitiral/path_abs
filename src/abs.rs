@@ -5,15 +5,15 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
-//! The absolute path type, the root type for _most_ `Path*` types in this module
-//! (except for `PathArc`).
+//! The absolute path type, the root type for all `Path*` types in this module.
 use std::env;
+use std::ffi;
 use std::fmt;
 use std::io;
 use std::path::{Component, PrefixComponent};
 use std_prelude::*;
 
-use super::{PathArc, PathDir, PathFile, Error, Result};
+use super::{PathMut, PathOps, PathDir, PathFile, Error, Result};
 
 /// Converts any PrefixComponent into verbatim ("extended-length") form.
 fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
@@ -27,9 +27,11 @@ fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
         // This prefix needs canonicalization.
         let res = path_prefix
             .canonicalize()
-            .map_err(|e|
-                Error::new(e, "canonicalizing", PathArc::new(path_prefix))
-            )?;
+            .map_err(|e| Error::new(
+                e,
+                "canonicalizing",
+                path_prefix.to_path_buf().into(),
+            ))?;
         Ok(res)
     }
 }
@@ -47,7 +49,7 @@ fn pop_or_error(path: &mut PathBuf) -> ::std::result::Result<(), io::Error> {
 /// An absolute (not _necessarily_ [canonicalized][1]) path that may or may not exist.
 ///
 /// [1]: https://doc.rust-lang.org/std/path/struct.Path.html?search=#method.canonicalize
-pub struct PathAbs(pub(crate) PathArc);
+pub struct PathAbs(pub(crate) Arc<PathBuf>);
 
 impl PathAbs {
     /// Construct an absolute path from an arbitrary (absolute or relative) one.
@@ -75,7 +77,7 @@ impl PathAbs {
     /// # Examples
     ///
     /// ```rust
-    /// use path_abs::PathAbs;
+    /// use path_abs::{PathAbs, PathInfo};
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let lib = PathAbs::new("src/lib.rs")?;
@@ -84,10 +86,10 @@ impl PathAbs {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathAbs> {
-        let path = PathArc::new(path);
+        let path = Arc::new(path.as_ref().to_path_buf());
         let mut res = PathBuf::new();
 
-        fn maybe_init_res(res: &mut PathBuf, resolvee: &PathArc) -> Result<()> {
+        fn maybe_init_res(res: &mut PathBuf, resolvee: Arc<PathBuf>) -> Result<()> {
             if !res.as_os_str().is_empty() {
                 // res has already been initialized, let's leave it alone.
                 return Ok(());
@@ -99,11 +101,11 @@ impl PathAbs {
                 Error::new(
                     e,
                     "getting current_dir while resolving absolute",
-                    resolvee.clone(),
+                    resolvee,
                 )
             })?;
             *res = cwd.canonicalize().map_err(|e| {
-                Error::new(e, "canonicalizing", PathArc::new(&cwd))
+                Error::new(e, "canonicalizing", cwd.into())
             })?;
 
             Ok(())
@@ -130,7 +132,7 @@ impl PathAbs {
                         // it manually: initialize `res` with the current
                         // working directory (whatever it is), and truncate it
                         // to its prefix by pushing `\`.
-                        maybe_init_res(&mut res, &path)?;
+                        maybe_init_res(&mut res, path.clone())?;
                         res.push(each);
                     } else {
                         // On other platforms, a root path component is always
@@ -145,7 +147,7 @@ impl PathAbs {
                 Component::ParentDir => {
                     // A parent component is always relative to some existing
                     // path.
-                    maybe_init_res(&mut res, &path)?;
+                    maybe_init_res(&mut res, path.clone())?;
                     pop_or_error(&mut res)
                         .map_err(|e| {
                             Error::new(e, "resolving absolute", path.clone())
@@ -155,13 +157,13 @@ impl PathAbs {
                 Component::Normal(c) => {
                     // A normal component is always relative to some existing
                     // path.
-                    maybe_init_res(&mut res, &path)?;
+                    maybe_init_res(&mut res, path.clone())?;
                     res.push(c);
                 }
             }
         }
 
-        Ok(PathAbs(PathArc(Arc::new(res))))
+        Ok(PathAbs(Arc::new(res)))
     }
 
     /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
@@ -187,7 +189,7 @@ impl PathAbs {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// use path_abs::PathAbs;
+    /// use path_abs::{PathAbs, PathInfo};
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// // this file exist
@@ -207,7 +209,7 @@ impl PathAbs {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
-        PathAbs(PathArc::new(fake_path))
+        PathAbs(Arc::new(fake_path.as_ref().to_path_buf()))
     }
 }
 
@@ -217,11 +219,40 @@ impl fmt::Debug for PathAbs {
     }
 }
 
-impl AsRef<PathArc> for PathAbs {
-    fn as_ref(&self) -> &PathArc {
-        &self.0
+impl PathMut for PathAbs {
+    fn append<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        self.0.append(path)
+    }
+    fn truncate_to_parent(&mut self) -> Result<()> {
+        self.0.truncate_to_parent()
+    }
+    fn truncate_to_root(&mut self) {
+        self.0.truncate_to_root()
+    }
+    fn set_file_name<S: AsRef<ffi::OsStr>>(&mut self, file_name: S) {
+        self.0.set_file_name(file_name)
+    }
+    fn set_extension<S: AsRef<ffi::OsStr>>(&mut self, extension: S) -> bool {
+        self.0.set_extension(extension)
     }
 }
+
+impl PathOps for PathAbs {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        Ok(PathAbs(self.0.concat(path)?))
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        PathAbs(self.0.with_file_name(file_name))
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        PathAbs(self.0.with_extension(extension))
+    }
+}
+
 
 impl AsRef<Path> for PathAbs {
     fn as_ref(&self) -> &Path {
@@ -235,12 +266,6 @@ impl AsRef<PathBuf> for PathAbs {
     }
 }
 
-impl Borrow<PathArc> for PathAbs {
-    fn borrow(&self) -> &PathArc {
-        self.as_ref()
-    }
-}
-
 impl Borrow<Path> for PathAbs {
     fn borrow(&self) -> &Path {
         self.as_ref()
@@ -249,12 +274,6 @@ impl Borrow<Path> for PathAbs {
 
 impl Borrow<PathBuf> for PathAbs {
     fn borrow(&self) -> &PathBuf {
-        self.as_ref()
-    }
-}
-
-impl<'a> Borrow<PathArc> for &'a PathAbs {
-    fn borrow(&self) -> &PathArc {
         self.as_ref()
     }
 }
@@ -271,30 +290,17 @@ impl<'a> Borrow<PathBuf> for &'a PathAbs {
     }
 }
 
-impl Deref for PathAbs {
-    type Target = PathArc;
-
-    fn deref(&self) -> &PathArc {
-        &self.0
-    }
-}
-
-impl From<PathAbs> for PathArc {
-    fn from(path: PathAbs) -> PathArc {
-        path.0
-    }
-}
-
 impl From<PathAbs> for Arc<PathBuf> {
     fn from(path: PathAbs) -> Arc<PathBuf> {
-        let arc: PathArc = path.into();
-        arc.0
+        path.0
     }
 }
 
 impl From<PathAbs> for PathBuf {
     fn from(path: PathAbs) -> PathBuf {
-        let arc: PathArc = path.into();
-        arc.into()
+        match Arc::try_unwrap(path.0) {
+            Ok(p) => p,
+            Err(inner) => inner.as_ref().clone(),
+        }
     }
 }

@@ -5,13 +5,14 @@
  * http://opensource.org/licenses/MIT>, at your option. This file may not be
  * copied, modified, or distributed except according to those terms.
  */
+use std::ffi;
 use std::fs;
 use std::fmt;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{FileEdit, FileRead, FileWrite, PathDir, PathAbs, PathArc};
+use super::{FileEdit, FileRead, FileWrite, PathInfo, PathOps, PathDir, PathAbs};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -54,8 +55,8 @@ impl PathFile {
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
-            Some(path) => Some(PathDir(PathAbs(PathArc::new(path)))),
-            None => None,
+            Ok(path) => Some(PathDir(PathAbs(Arc::new(path.to_path_buf())))),
+            Err(_) => None,
         }
     }
 
@@ -122,7 +123,11 @@ impl PathFile {
             .write(true)
             .create(true)
             .open(&path)
-            .map_err(|err| Error::new(err, "opening", PathArc::new(&path)))?;
+            .map_err(|err| Error::new(
+                err,
+                "opening",
+                path.as_ref().to_path_buf().into(),
+            ))?;
         PathFile::new(path)
     }
 
@@ -342,7 +347,7 @@ impl PathFile {
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
-    /// use path_abs::PathFile;
+    /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
@@ -421,7 +426,7 @@ impl PathFile {
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
-    /// use path_abs::PathFile;
+    /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
@@ -476,12 +481,6 @@ impl AsRef<PathAbs> for PathFile {
     }
 }
 
-impl AsRef<PathArc> for PathFile {
-    fn as_ref(&self) -> &PathArc {
-        &self.0
-    }
-}
-
 impl AsRef<Path> for PathFile {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
@@ -500,12 +499,6 @@ impl Borrow<PathAbs> for PathFile {
     }
 }
 
-impl Borrow<PathArc> for PathFile {
-    fn borrow(&self) -> &PathArc {
-        self.as_ref()
-    }
-}
-
 impl Borrow<Path> for PathFile {
     fn borrow(&self) -> &Path {
         self.as_ref()
@@ -520,12 +513,6 @@ impl Borrow<PathBuf> for PathFile {
 
 impl<'a> Borrow<PathAbs> for &'a PathFile {
     fn borrow(&self) -> &PathAbs {
-        self.as_ref()
-    }
-}
-
-impl<'a> Borrow<PathArc> for &'a PathFile {
-    fn borrow(&self) -> &PathArc {
         self.as_ref()
     }
 }
@@ -556,13 +543,6 @@ impl From<PathFile> for PathAbs {
     }
 }
 
-impl From<PathFile> for PathArc {
-    fn from(path: PathFile) -> PathArc {
-        let abs: PathAbs = path.into();
-        abs.into()
-    }
-}
-
 impl From<PathFile> for Arc<PathBuf> {
     fn from(path: PathFile) -> Arc<PathBuf> {
         let abs: PathAbs = path.into();
@@ -574,6 +554,22 @@ impl From<PathFile> for PathBuf {
     fn from(path: PathFile) -> PathBuf {
         let abs: PathAbs = path.into();
         abs.into()
+    }
+}
+
+impl PathOps for PathFile {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        Ok(self.0.concat(path)?)
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        self.0.with_file_name(file_name)
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        self.0.with_extension(extension)
     }
 }
 

@@ -12,7 +12,7 @@ use std::fmt;
 use std::io;
 use std_prelude::*;
 
-use super::{Error, Result};
+use super::{Error, Result, PathInfo};
 use super::PathFile;
 use super::open::FileOpen;
 

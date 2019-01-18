@@ -16,7 +16,7 @@ extern crate pretty_assertions;
 extern crate tempdir;
 
 use path_abs::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::env;
 
 #[test]
@@ -31,7 +31,7 @@ fn test_absolute() {
     }
     let tmp = tempdir::TempDir::new("ex").unwrap();
     let tmp = tmp.path();
-    let tmp_abs = PathArc::new(&tmp).canonicalize().unwrap();
+    let tmp_abs = PathAbs::new(&tmp).unwrap();
     env::set_current_dir(&tmp_abs).unwrap();
     if cfg!(windows) {
         let result = Path::new(r"\").canonicalize();
@@ -47,12 +47,12 @@ fn test_absolute() {
     //     + d/
 
     let a = PathDir::create(&tmp.join("a")).unwrap();
-    let b = PathDir::create(&a.join("b")).unwrap();
-    let c = PathDir::create(&b.join("c")).unwrap();
-    let d = PathDir::create(&c.join("d")).unwrap();
+    let b = PathDir::create(&a.concat("b").unwrap()).unwrap();
+    let c = PathDir::create(&b.concat("c").unwrap()).unwrap();
+    let d = PathDir::create(&c.concat("d").unwrap()).unwrap();
 
     // create symbolic link from a/e -> a/b/c/d
-    let e_sym = d.symlink(&a.join("e")).unwrap();
+    let e_sym = d.symlink(&a.concat("e").unwrap()).unwrap();
     let ty = e_sym.symlink_metadata().unwrap().file_type();
     assert!(ty.is_symlink(), "{}", e_sym.display());
 
@@ -60,10 +60,10 @@ fn test_absolute() {
     assert_eq!(d, e_sym.canonicalize().unwrap());
 
     let a_cwd = Path::new("a");
-    let b_cwd = a.join("b");
-    let c_cwd = b.join("c");
-    let d_cwd = c.join("d");
-    let e_cwd = a.join("e");
+    let b_cwd = a.concat("b").unwrap();
+    let c_cwd = b.concat("c").unwrap();
+    let d_cwd = c.concat("d").unwrap();
+    let e_cwd = a.concat("e").unwrap();
 
     assert_eq!(a, PathDir::new(&a_cwd).unwrap());
     assert_eq!(b, PathDir::new(&b_cwd).unwrap());
@@ -71,12 +71,12 @@ fn test_absolute() {
     assert_eq!(d, PathDir::new(&d_cwd).unwrap());
     assert_eq!(e_sym, PathDir::new(&e_cwd).unwrap());
 
-    assert_eq!(b, PathDir::new(c.join("..")).unwrap());
-    assert_eq!(a, PathDir::new(c.join("..").join("..")).unwrap());
+    assert_eq!(b, PathDir::new(c.concat("..").unwrap()).unwrap());
+    assert_eq!(a, PathDir::new(c.concat("..").unwrap().concat("..").unwrap()).unwrap());
     // just create a PathType
     let _ = PathType::new(&e_sym).unwrap();
 
-    let mut root_dots = tmp_abs.to_path_buf();
+    let mut root_dots: PathBuf = tmp_abs.clone().into();
     let mut dots = tmp_abs.components().count() - 1;
     if cfg!(windows) {
         // windows has _two_ "roots", prefix _and_ "root".
@@ -91,5 +91,5 @@ fn test_absolute() {
     } else {
         assert_eq!(PathDir::new("/").unwrap(), root);
     }
-    assert!(PathDir::new(root.join("..")).is_err());
+    assert!(root.concat("..").is_err());
 }

@@ -6,13 +6,14 @@
  * copied, modified, or distributed except according to those terms.
  */
 //! Paths to Directories and associated methods.
+use std::ffi;
 use std::fs;
 use std::fmt;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{PathAbs, PathArc, PathType};
+use super::{PathAbs, PathType, PathInfo, PathOps};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// A `PathAbs` that is guaranteed to be a directory, with associated methods.
@@ -52,7 +53,11 @@ impl PathDir {
     /// ```
     pub fn current_dir() -> Result<PathDir> {
         let dir = ::std::env::current_dir()
-            .map_err(|err| Error::new(err, "getting current_dir", PathArc::new("$CWD")))?;
+            .map_err(|err| Error::new(
+                err,
+                "getting current_dir",
+                Path::new("$CWD").to_path_buf().into(),
+            ))?;
         PathDir::new(dir)
     }
 
@@ -115,7 +120,11 @@ impl PathDir {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => return Err(Error::new(err, "creating", PathArc::new(path))),
+                _ => return Err(Error::new(
+                    err,
+                    "creating",
+                    path.as_ref().to_path_buf().into(),
+                )),
             }
         }
         PathDir::new(path)
@@ -143,7 +152,11 @@ impl PathDir {
     /// ```
     pub fn create_all<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         fs::create_dir_all(&path)
-            .map_err(|err| Error::new(err, "creating-all", PathArc::new(&path)))?;
+            .map_err(|err| Error::new(
+                err,
+                "creating-all",
+                path.as_ref().to_path_buf().into(),
+            ))?;
         PathDir::new(path)
     }
 
@@ -152,7 +165,7 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// use path_abs::{PathDir, PathFile};
+    /// use path_abs::{PathDir, PathFile, PathInfo};
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let src = PathDir::new("src")?;
@@ -161,7 +174,7 @@ impl PathDir {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn join_abs<P: AsRef<Path>>(&self, path: P) -> Result<PathType> {
-        let joined = self.join(path.as_ref());
+        let joined = self.concat(path.as_ref())?;
         PathType::new(joined)
     }
 
@@ -172,7 +185,7 @@ impl PathDir {
     /// # extern crate path_abs;
     /// # extern crate tempdir;
     /// use std::collections::HashSet;
-    /// use path_abs::{PathDir, PathFile, PathType};
+    /// use path_abs::{PathDir, PathFile, PathType, PathOps};
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
@@ -180,8 +193,8 @@ impl PathDir {
     /// # let example = &tmp.path().join("example");
     ///
     /// let example_dir = PathDir::create(example)?;
-    /// let foo_dir = PathDir::create(example_dir.join("foo"))?;
-    /// let bar_file = PathFile::create(example_dir.join("bar.txt"))?;
+    /// let foo_dir = PathDir::create(example_dir.concat("foo")?)?;
+    /// let bar_file = PathFile::create(example_dir.concat("bar.txt")?)?;
     ///
     /// let mut result = HashSet::new();
     /// for p in example_dir.list()? {
@@ -266,7 +279,7 @@ impl PathDir {
     /// ```rust
     /// # extern crate path_abs;
     /// # extern crate tempdir;
-    /// use path_abs::{PathDir, PathFile};
+    /// use path_abs::{PathDir, PathFile, PathOps};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
@@ -276,7 +289,7 @@ impl PathDir {
     /// # let example = &tmp.path().join(example);
     /// # let example_sym = &tmp.path().join(example_sym);
     /// let dir = PathDir::create(example)?;
-    /// let file = PathFile::create(dir.join("example.txt"))?;
+    /// let file = PathFile::create(dir.concat("example.txt")?)?;
     ///
     /// let dir_sym = dir.symlink(example_sym)?;
     ///
@@ -333,8 +346,8 @@ impl PathDir {
     /// ```
     pub fn parent_dir(&self) -> Option<PathDir> {
         match self.parent() {
-            Some(path) => Some(PathDir(PathAbs(PathArc::new(path)))),
-            None => None,
+            Ok(path) => Some(PathDir(PathAbs(Arc::new(path.to_path_buf())))),
+            Err(_) => None,
         }
     }
 
@@ -386,12 +399,6 @@ impl AsRef<PathAbs> for PathDir {
     }
 }
 
-impl AsRef<PathArc> for PathDir {
-    fn as_ref(&self) -> &PathArc {
-        self.0.as_ref()
-    }
-}
-
 impl AsRef<Path> for PathDir {
     fn as_ref(&self) -> &Path {
         self.0.as_ref()
@@ -410,12 +417,6 @@ impl Borrow<PathAbs> for PathDir {
     }
 }
 
-impl Borrow<PathArc> for PathDir {
-    fn borrow(&self) -> &PathArc {
-        self.as_ref()
-    }
-}
-
 impl Borrow<Path> for PathDir {
     fn borrow(&self) -> &Path {
         self.as_ref()
@@ -430,12 +431,6 @@ impl Borrow<PathBuf> for PathDir {
 
 impl<'a> Borrow<PathAbs> for &'a PathDir {
     fn borrow(&self) -> &PathAbs {
-        self.as_ref()
-    }
-}
-
-impl<'a> Borrow<PathArc> for &'a PathDir {
-    fn borrow(&self) -> &PathArc {
         self.as_ref()
     }
 }
@@ -466,13 +461,6 @@ impl From<PathDir> for PathAbs {
     }
 }
 
-impl From<PathDir> for PathArc {
-    fn from(path: PathDir) -> PathArc {
-        let abs: PathAbs = path.into();
-        abs.0
-    }
-}
-
 impl From<PathDir> for Arc<PathBuf> {
     fn from(path: PathDir) -> Arc<PathBuf> {
         let abs: PathAbs = path.into();
@@ -491,15 +479,18 @@ impl From<PathDir> for PathBuf {
 mod tests {
     use tempdir::TempDir;
     use std::collections::HashSet;
-    use super::super::{PathAbs, PathDir, PathFile, PathType};
+    use super::super::{PathAbs, PathDir, PathFile, PathType, PathOps};
 
     #[test]
     fn sanity_list() {
         let tmp_dir = TempDir::new("example").expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).unwrap();
 
-        let foo_dir = PathDir::create(tmp_abs.join("foo")).unwrap();
-        let bar_file = PathFile::create(tmp_abs.join("bar.txt")).unwrap();
+        let foo_path = tmp_abs.concat("foo").expect("path foo");
+        let foo_dir = PathDir::create(foo_path).unwrap();
+
+        let bar_path = tmp_abs.concat("bar").expect("path bar");
+        let bar_file = PathFile::create(bar_path).unwrap();
 
         let mut result = HashSet::new();
         for p in tmp_abs.list().unwrap() {
@@ -515,6 +506,22 @@ mod tests {
         // just ensure that this compiles
         let _: PathAbs = foo_dir.into();
         let _: PathAbs = bar_file.into();
+    }
+}
+
+impl PathOps for PathDir {
+    type Output = PathAbs;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        Ok(self.0.concat(path)?)
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        self.0.with_file_name(file_name)
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        self.0.with_extension(extension)
     }
 }
 
