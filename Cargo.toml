@@ -1,5 +1,5 @@
 [package]
-authors = ["Garrett Berg <googberg@gmail.com>"]
+authors = ["Rett Berg <googberg@gmail.com>"]
 description = "Ergonomic paths and files in rust."
 documentation = "https://docs.rs/path_abs"
 keywords = [
@@ -14,6 +14,7 @@ name = "path_abs"
 readme = "README.md"
 repository = "https://github.com/vitiral/path_abs"
 version = "0.4.1"
+edition = "2018"
 
 [dependencies]
 std_prelude = "0.2.12"

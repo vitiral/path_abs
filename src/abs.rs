@@ -16,7 +16,7 @@ use std_prelude::*;
 use super::{PathMut, PathOps, PathDir, PathFile, Error, Result};
 
 /// Converts any PrefixComponent into verbatim ("extended-length") form.
-fn make_verbatim_prefix(prefix: &PrefixComponent) -> Result<PathBuf> {
+fn make_verbatim_prefix(prefix: &PrefixComponent<'_>) -> Result<PathBuf> {
     let path_prefix = Path::new(prefix.as_os_str());
 
     if prefix.kind().is_verbatim() {
@@ -214,7 +214,7 @@ impl PathAbs {
 }
 
 impl fmt::Debug for PathAbs {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

@@ -206,7 +206,7 @@ extern crate serde;
 #[macro_use]
 #[cfg(feature = "serialize")]
 extern crate serde_derive;
-extern crate std_prelude;
+
 #[cfg(feature = "serialize")]
 extern crate stfu8;
 
@@ -239,14 +239,14 @@ mod ty;
 mod write;
 mod read;
 
-pub use abs::PathAbs;
-pub use dir::{ListDir, PathDir};
-pub use file::PathFile;
-pub use ty::PathType;
+pub use crate::abs::PathAbs;
+pub use crate::dir::{ListDir, PathDir};
+pub use crate::file::PathFile;
+pub use crate::ty::PathType;
 
-pub use edit::FileEdit;
-pub use write::FileWrite;
-pub use read::FileRead;
+pub use crate::edit::FileEdit;
+pub use crate::write::FileWrite;
+pub use crate::read::FileRead;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
 
@@ -295,13 +295,13 @@ impl Error {
 }
 
 impl fmt::Debug for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Error<{}>", self)
     }
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{} when {} {}",
@@ -334,7 +334,7 @@ impl error::Error for Error {
         self.io_err.description()
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         Some(&self.io_err)
     }
 }
@@ -367,7 +367,7 @@ pub trait PathInfo {
 
     fn to_str(&self) -> Option<&str> { Path::to_str(self.as_path()) }
 
-    fn to_string_lossy(&self) -> Cow<str> { Path::to_string_lossy(self.as_path()) }
+    fn to_string_lossy(&self) -> Cow<'_, str> { Path::to_string_lossy(self.as_path()) }
 
     fn is_absolute(&self) -> bool { Path::is_absolute(self.as_path()) }
 
@@ -375,7 +375,7 @@ pub trait PathInfo {
 
     fn has_root(&self) -> bool { Path::has_root(self.as_path()) }
 
-    fn ancestors(&self) -> path::Ancestors { Path::ancestors(self.as_path()) }
+    fn ancestors(&self) -> path::Ancestors<'_> { Path::ancestors(self.as_path()) }
 
     fn file_name(&self) -> Option<&ffi::OsStr> { Path::file_name(self.as_path()) }
 
@@ -391,11 +391,11 @@ pub trait PathInfo {
 
     fn extension(&self) -> Option<&ffi::OsStr> { Path::extension(self.as_path()) }
 
-    fn components(&self) -> path::Components { Path::components(self.as_path()) }
+    fn components(&self) -> path::Components<'_> { Path::components(self.as_path()) }
 
-    fn iter(&self) -> path::Iter { Path::iter(self.as_path()) }
+    fn iter(&self) -> path::Iter<'_> { Path::iter(self.as_path()) }
 
-    fn display(&self) -> path::Display { Path::display(self.as_path()) }
+    fn display(&self) -> path::Display<'_> { Path::display(self.as_path()) }
 
     /// Queries the file system to get information about a file, directory, etc.
     ///

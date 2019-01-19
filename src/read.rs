@@ -70,7 +70,7 @@ impl FileRead {
 }
 
 impl fmt::Debug for FileRead {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileRead(")?;
         self.path.fmt(f)?;
         write!(f, ")")

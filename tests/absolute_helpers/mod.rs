@@ -42,7 +42,7 @@ where
 
 #[test]
 fn absolute_path_is_idempotent() {
-    ::setup();
+    crate::setup();
     // The current_dir() result is always absolute,
     // so absolutizing it should not change it.
 
@@ -55,7 +55,7 @@ fn absolute_path_is_idempotent() {
 
 #[test]
 fn absolute_path_removes_currentdir_component() {
-    ::setup();
+    crate::setup();
     let actual = PathAbs::new("foo/./bar").unwrap();
     let expected = PathAbs::new("foo/bar").unwrap();
 
@@ -64,7 +64,7 @@ fn absolute_path_removes_currentdir_component() {
 
 #[test]
 fn absolute_path_removes_empty_component() {
-    ::setup();
+    crate::setup();
     let actual = PathAbs::new("foo//bar").unwrap();
     let expected = PathAbs::new("foo/bar").unwrap();
 
@@ -73,7 +73,7 @@ fn absolute_path_removes_empty_component() {
 
 #[test]
 fn absolute_path_lexically_resolves_parentdir_component() {
-    ::setup();
+    crate::setup();
     let tmp_dir = TempDir::new("normalize_parentdir").unwrap();
     let a_dir = tmp_dir.path().join("a");
     fs::create_dir_all(&a_dir).unwrap();
@@ -96,7 +96,7 @@ fn absolute_path_lexically_resolves_parentdir_component() {
 
 #[test]
 fn absolute_path_interprets_relative_to_current_directory() {
-    ::setup();
+    crate::setup();
     let actual = PathAbs::new("foo").unwrap();
     let expected = PathAbs::new(env::current_dir().unwrap().join("foo"))
         .unwrap();
@@ -111,7 +111,7 @@ mod unix {
 
     #[test]
     fn absolute_path_need_not_exist() {
-        ::setup();
+        crate::setup();
 
         // It's not likely this path would exist, but let's be sure.
         let raw_path = path::Path::new("/does/not/exist");
@@ -127,7 +127,7 @@ mod unix {
 
     #[test]
     fn absolute_path_cannot_go_above_root() {
-        ::setup();
+        crate::setup();
         let err = PathAbs::new("/foo/../..").unwrap_err();
 
         assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);

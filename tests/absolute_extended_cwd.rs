@@ -1,7 +1,7 @@
 //! This file tests PathAbs::new() for Windows when the current directory
 //! uses extended-length path syntax (like `\\?\C:\`).
-extern crate path_abs;
-extern crate tempdir;
+
+
 
 // These tests are already run for Unix in absolute_regular_cwd.rs, and Unix
 // doesn't have "extended-length path syntax", so we can make them Windows-only

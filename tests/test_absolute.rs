@@ -10,10 +10,10 @@
 //! - Using the current working directory
 //! - `..` paths that consume the "root"
 
-extern crate path_abs;
+
 #[macro_use]
 extern crate pretty_assertions;
-extern crate tempdir;
+use tempdir;
 
 use path_abs::*;
 use std::path::{Path, PathBuf};

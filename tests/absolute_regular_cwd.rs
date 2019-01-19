@@ -1,5 +1,5 @@
-extern crate path_abs;
-extern crate tempdir;
+
+
 
 mod absolute_helpers;
 
