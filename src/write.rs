@@ -7,14 +7,14 @@
  */
 //! Open write-only file paths and associated methods.
 
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::io;
 use std_prelude::*;
 
-use super::{Error, Result, PathInfo};
-use super::PathFile;
 use super::open::FileOpen;
+use super::PathFile;
+use super::{Error, PathInfo, Result};
 
 /// A write-only file handle with `path()` attached and improved error messages. Contains only the
 /// methods and trait implementations which are allowed by a write-only file.
@@ -215,7 +215,7 @@ impl Borrow<FileOpen> for FileWrite {
 }
 
 impl Borrow<File> for FileWrite {
-    fn borrow(&self) -> &File{
+    fn borrow(&self) -> &File {
         self.0.borrow()
     }
 }
@@ -227,7 +227,7 @@ impl<'a> Borrow<FileOpen> for &'a FileWrite {
 }
 
 impl<'a> Borrow<File> for &'a FileWrite {
-    fn borrow(&self) -> &File{
+    fn borrow(&self) -> &File {
         self.0.borrow()
     }
 }

@@ -13,7 +13,7 @@ use std::io;
 use std::path::{Component, PrefixComponent};
 use std_prelude::*;
 
-use super::{PathMut, PathOps, PathDir, PathFile, Error, Result};
+use super::{Error, PathDir, PathFile, PathMut, PathOps, Result};
 
 /// Converts any PrefixComponent into verbatim ("extended-length") form.
 fn make_verbatim_prefix(prefix: &PrefixComponent<'_>) -> Result<PathBuf> {
@@ -27,11 +27,7 @@ fn make_verbatim_prefix(prefix: &PrefixComponent<'_>) -> Result<PathBuf> {
         // This prefix needs canonicalization.
         let res = path_prefix
             .canonicalize()
-            .map_err(|e| Error::new(
-                e,
-                "canonicalizing",
-                path_prefix.to_path_buf().into(),
-            ))?;
+            .map_err(|e| Error::new(e, "canonicalizing", path_prefix.to_path_buf().into()))?;
         Ok(res)
     }
 }
@@ -98,15 +94,11 @@ impl PathAbs {
             // res has not been initialized, let's initialize it to the
             // canonicalized current directory.
             let cwd = env::current_dir().map_err(|e| {
-                Error::new(
-                    e,
-                    "getting current_dir while resolving absolute",
-                    resolvee,
-                )
+                Error::new(e, "getting current_dir while resolving absolute", resolvee)
             })?;
-            *res = cwd.canonicalize().map_err(|e| {
-                Error::new(e, "canonicalizing", cwd.into())
-            })?;
+            *res = cwd
+                .canonicalize()
+                .map_err(|e| Error::new(e, "canonicalizing", cwd.into()))?;
 
             Ok(())
         };
@@ -149,9 +141,7 @@ impl PathAbs {
                     // path.
                     maybe_init_res(&mut res, path.clone())?;
                     pop_or_error(&mut res)
-                        .map_err(|e| {
-                            Error::new(e, "resolving absolute", path.clone())
-                        })?;
+                        .map_err(|e| Error::new(e, "resolving absolute", path.clone()))?;
                 }
 
                 Component::Normal(c) => {
@@ -252,7 +242,6 @@ impl PathOps for PathAbs {
         PathAbs(self.0.with_extension(extension))
     }
 }
-
 
 impl AsRef<Path> for PathAbs {
     fn as_ref(&self) -> &Path {

@@ -11,7 +11,6 @@
 #[macro_use]
 extern crate pretty_assertions;
 
-
 use std::path::Path;
 use std::process::Command;
 

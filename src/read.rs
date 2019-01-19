@@ -7,14 +7,14 @@
  */
 //! Open file paths that are read-only.
 
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::io;
 use std_prelude::*;
 
-use super::{Error, Result, PathInfo};
-use super::PathFile;
 use super::open::FileOpen;
+use super::PathFile;
+use super::{Error, PathInfo, Result};
 
 /// A read-only file handle with `path()` attached and improved error messages. Contains only the
 /// methods and trait implementations which are allowed by a read-only file.
@@ -118,7 +118,7 @@ impl Borrow<FileOpen> for FileRead {
 }
 
 impl Borrow<File> for FileRead {
-    fn borrow(&self) -> &File{
+    fn borrow(&self) -> &File {
         self.0.borrow()
     }
 }
@@ -130,7 +130,7 @@ impl<'a> Borrow<FileOpen> for &'a FileRead {
 }
 
 impl<'a> Borrow<File> for &'a FileRead {
-    fn borrow(&self) -> &File{
+    fn borrow(&self) -> &File {
         self.0.borrow()
     }
 }

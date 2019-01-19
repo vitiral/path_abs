@@ -1,6 +1,3 @@
-
-
-
 mod absolute_helpers;
 
 fn setup() {
