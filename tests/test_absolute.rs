@@ -10,14 +10,13 @@
 //! - Using the current working directory
 //! - `..` paths that consume the "root"
 
-extern crate path_abs;
 #[macro_use]
 extern crate pretty_assertions;
-extern crate tempdir;
+use tempdir;
 
 use path_abs::*;
-use std::path::{Path, PathBuf};
 use std::env;
+use std::path::{Path, PathBuf};
 
 #[test]
 fn test_absolute() {
@@ -72,7 +71,10 @@ fn test_absolute() {
     assert_eq!(e_sym, PathDir::new(&e_cwd).unwrap());
 
     assert_eq!(b, PathDir::new(c.concat("..").unwrap()).unwrap());
-    assert_eq!(a, PathDir::new(c.concat("..").unwrap().concat("..").unwrap()).unwrap());
+    assert_eq!(
+        a,
+        PathDir::new(c.concat("..").unwrap().concat("..").unwrap()).unwrap()
+    );
     // just create a PathType
     let _ = PathType::new(&e_sym).unwrap();
 

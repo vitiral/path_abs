@@ -6,9 +6,9 @@
  * copied, modified, or distributed except according to those terms.
  */
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
-use stfu8;
 use std::string::ToString;
 use std_prelude::*;
+use stfu8;
 
 use std::ffi::OsString;
 #[cfg(unix)]
@@ -26,7 +26,10 @@ trait FromStfu8: Sized {
     fn from_stfu8(s: &str) -> Result<Self, stfu8::DecodeError>;
 }
 
-impl<T> ToStfu8 for T where T: Borrow<PathBuf> {
+impl<T> ToStfu8 for T
+where
+    T: Borrow<PathBuf>,
+{
     #[cfg(unix)]
     fn to_stfu8(&self) -> String {
         let bytes = self.borrow().as_os_str().as_bytes();
@@ -40,7 +43,10 @@ impl<T> ToStfu8 for T where T: Borrow<PathBuf> {
     }
 }
 
-impl <T> FromStfu8 for T where T: From<PathBuf> {
+impl<T> FromStfu8 for T
+where
+    T: From<PathBuf>,
+{
     #[cfg(unix)]
     fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u8(s)?;
@@ -81,8 +87,8 @@ impl<'de> Deserialize<'de> for PathAbs {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let path = PathBuf::from_stfu8(&s)
-            .map_err(|err| serde::de::Error::custom(&err.to_string()))?;
+        let path =
+            PathBuf::from_stfu8(&s).map_err(|err| serde::de::Error::custom(&err.to_string()))?;
         Ok(PathAbs(Arc::new(path)))
     }
 }
@@ -93,8 +99,7 @@ impl<'de> Deserialize<'de> for PathFile {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathFile::from_abs(abs)
-            .map_err(|err| serde::de::Error::custom(&err.to_string()))
+        PathFile::from_abs(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 
@@ -104,14 +109,13 @@ impl<'de> Deserialize<'de> for PathDir {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathDir::from_abs(abs)
-            .map_err(|err| serde::de::Error::custom(&err.to_string()))
+        PathDir::from_abs(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PathDir, PathFile, PathType, PathOps};
+    use super::super::{PathDir, PathFile, PathOps, PathType};
     use super::*;
 
     #[cfg(unix)]
@@ -138,7 +142,9 @@ mod tests {
 
         let foo = PathFile::create(tmp_abs.concat("foo.txt").unwrap()).expect("foo.txt");
         let bar_dir = PathDir::create(tmp_abs.concat("bar").unwrap()).expect("bar");
-        let foo_bar_dir = PathDir::create_all(tmp_abs.concat("foo").unwrap().concat("bar").unwrap()).expect("foo/bar");
+        let foo_bar_dir =
+            PathDir::create_all(tmp_abs.concat("foo").unwrap().concat("bar").unwrap())
+                .expect("foo/bar");
 
         let expected = vec![
             PathType::File(foo),
@@ -146,10 +152,8 @@ mod tests {
             PathType::Dir(foo_bar_dir),
         ];
 
-        let expected_str = SERIALIZED.replace(
-                "{0}",
-                &tmp_abs.to_stfu8(),
-            )
+        let expected_str = SERIALIZED
+            .replace("{0}", &tmp_abs.to_stfu8())
             // JSON needs backslashes escaped. Be careful not to invoke BA'AL:
             // https://xkcd.com/1638/)
             .replace(r"\", r"\\");

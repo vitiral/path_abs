@@ -6,13 +6,13 @@
  * copied, modified, or distributed except according to those terms.
  */
 use std::ffi;
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{FileEdit, FileRead, FileWrite, PathInfo, PathOps, PathDir, PathAbs};
+use super::{FileEdit, FileRead, FileWrite, PathAbs, PathDir, PathInfo, PathOps};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// a `PathAbs` that was a file at the time of initialization, with associated methods.
@@ -123,11 +123,7 @@ impl PathFile {
             .write(true)
             .create(true)
             .open(&path)
-            .map_err(|err| Error::new(
-                err,
-                "opening",
-                path.as_ref().to_path_buf().into(),
-            ))?;
+            .map_err(|err| Error::new(err, "opening", path.as_ref().to_path_buf().into()))?;
         PathFile::new(path)
     }
 
@@ -470,7 +466,7 @@ impl PathFile {
 }
 
 impl fmt::Debug for PathFile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

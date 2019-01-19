@@ -7,14 +7,14 @@
  */
 //! Open editable (read+write) file paths and associated methods.
 
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::io;
 use std_prelude::*;
 
-use super::{Error, Result, PathInfo};
-use super::PathFile;
 use super::open::FileOpen;
+use super::PathFile;
+use super::{Error, PathInfo, Result};
 
 /// A read/write file handle with `path()` attached and improved error messages. Contains methods
 /// and trait implements for both readable _and_ writeable files.
@@ -173,7 +173,7 @@ impl FileEdit {
 }
 
 impl fmt::Debug for FileEdit {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileEdit(")?;
         self.path.fmt(f)?;
         write!(f, ")")

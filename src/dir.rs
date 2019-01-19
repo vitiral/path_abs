@@ -7,13 +7,13 @@
  */
 //! Paths to Directories and associated methods.
 use std::ffi;
-use std::fs;
 use std::fmt;
+use std::fs;
 use std::io;
 use std_prelude::*;
 
 use super::{Error, Result};
-use super::{PathAbs, PathType, PathInfo, PathOps};
+use super::{PathAbs, PathInfo, PathOps, PathType};
 
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 /// A `PathAbs` that is guaranteed to be a directory, with associated methods.
@@ -52,12 +52,13 @@ impl PathDir {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn current_dir() -> Result<PathDir> {
-        let dir = ::std::env::current_dir()
-            .map_err(|err| Error::new(
+        let dir = ::std::env::current_dir().map_err(|err| {
+            Error::new(
                 err,
                 "getting current_dir",
                 Path::new("$CWD").to_path_buf().into(),
-            ))?;
+            )
+        })?;
         PathDir::new(dir)
     }
 
@@ -120,11 +121,13 @@ impl PathDir {
         if let Err(err) = fs::create_dir(&path) {
             match err.kind() {
                 io::ErrorKind::AlreadyExists => {}
-                _ => return Err(Error::new(
-                    err,
-                    "creating",
-                    path.as_ref().to_path_buf().into(),
-                )),
+                _ => {
+                    return Err(Error::new(
+                        err,
+                        "creating",
+                        path.as_ref().to_path_buf().into(),
+                    ));
+                }
             }
         }
         PathDir::new(path)
@@ -152,11 +155,7 @@ impl PathDir {
     /// ```
     pub fn create_all<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         fs::create_dir_all(&path)
-            .map_err(|err| Error::new(
-                err,
-                "creating-all",
-                path.as_ref().to_path_buf().into(),
-            ))?;
+            .map_err(|err| Error::new(err, "creating-all", path.as_ref().to_path_buf().into()))?;
         PathDir::new(path)
     }
 
@@ -208,8 +207,8 @@ impl PathDir {
     /// assert_eq!(expected, result);
     /// # Ok(()) } fn main() { try_main().unwrap() }
     pub fn list(&self) -> Result<ListDir> {
-        let fsread =
-            fs::read_dir(self).map_err(|err| Error::new(err, "reading dir", self.clone().into()))?;
+        let fsread = fs::read_dir(self)
+            .map_err(|err| Error::new(err, "reading dir", self.clone().into()))?;
         Ok(ListDir {
             dir: self.clone(),
             fsread: fsread,
@@ -378,7 +377,7 @@ impl ::std::iter::Iterator for ListDir {
                         err,
                         "iterating over",
                         self.dir.clone().into(),
-                    )))
+                    )));
                 }
             },
             None => return None,
@@ -388,7 +387,7 @@ impl ::std::iter::Iterator for ListDir {
 }
 
 impl fmt::Debug for PathDir {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -477,9 +476,9 @@ impl From<PathDir> for PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
+    use super::super::{PathAbs, PathDir, PathFile, PathOps, PathType};
     use std::collections::HashSet;
-    use super::super::{PathAbs, PathDir, PathFile, PathType, PathOps};
+    use tempdir::TempDir;
 
     #[test]
     fn sanity_list() {

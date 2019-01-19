@@ -7,12 +7,12 @@
  */
 //! Open file paths and associated methods.
 
-use std::fs;
 use std::fmt;
+use std::fs;
 use std_prelude::*;
 
-use super::{Error, Result};
 use super::PathFile;
+use super::{Error, Result};
 
 /// **INTERNAL TYPE: do not use directly.**
 ///
@@ -27,11 +27,7 @@ impl FileOpen {
     pub fn open<P: AsRef<Path>>(path: P, options: fs::OpenOptions) -> Result<FileOpen> {
         let file = options
             .open(&path)
-            .map_err(|err| Error::new(
-                err,
-                "opening",
-                path.as_ref().to_path_buf().into(),
-            ))?;
+            .map_err(|err| Error::new(err, "opening", path.as_ref().to_path_buf().into()))?;
 
         let path = PathFile::new(path)?;
         Ok(FileOpen {
@@ -79,7 +75,8 @@ impl FileOpen {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.try_clone
     pub fn try_clone(&self) -> Result<FileOpen> {
-        let file = self.file
+        let file = self
+            .file
             .try_clone()
             .map_err(|err| Error::new(err, "cloning file handle for", self.path.clone().into()))?;
         Ok(FileOpen {
@@ -90,7 +87,7 @@ impl FileOpen {
 }
 
 impl fmt::Debug for FileOpen {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Open(")?;
         self.path.fmt(f)?;
         write!(f, ")")
