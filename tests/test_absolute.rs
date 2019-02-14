@@ -94,4 +94,47 @@ fn test_absolute() {
         assert_eq!(PathDir::new("/").unwrap(), root);
     }
     assert!(root.concat("..").is_err());
+
+    if cfg!(windows) {
+        // Test that /-separated and \-separated paths can be joined
+        let ac1 = a.concat(r"b/c").unwrap();
+        assert!(ac1.metadata().is_ok());
+
+        let ac2 = a.concat(r"b\c").unwrap();
+        assert!(ac2.metadata().is_ok());
+    }
+}
+
+/// Check that issue #34 is fixed
+///
+/// After calling join(), the metadata are accessed to check that the computed path is valid.
+#[test]
+fn test_forward_and_backward_slashes() {
+    let tmp = tempdir::TempDir::new("ex").unwrap();
+    let tmp = tmp.path();
+
+    // Create directories:
+    // a/
+    // + b/
+    //   + c/
+    let a = PathDir::create(&tmp.join("a")).unwrap();
+    let b = PathDir::create(&a.concat("b").unwrap()).unwrap();
+    let c = PathDir::create(&b.concat("c").unwrap()).unwrap();
+
+    let a_abs = PathAbs::new(a).unwrap();
+
+    // Join /-separated relative path and check that the metadata are accessible
+    let forward_slash = a_abs.concat(r"b/c").unwrap();
+    assert!(forward_slash.metadata().is_ok());
+    assert_eq!(c, PathDir::new(forward_slash).unwrap());
+
+    // Join \-separated relative path and check that the metadata are accessible
+    // The following test only make sense on windows because the \ character isn't illegal in a
+    // directory name on linux, so the call to `concat(r"b\c")` would just add the single directory
+    // named "b\c"
+    if cfg!(windows) {
+        let backward_slash = a_abs.concat(r"b\c").unwrap();
+        assert!(backward_slash.metadata().is_ok());
+        assert_eq!(c, PathDir::new(backward_slash).unwrap());
+    }
 }
