@@ -34,36 +34,24 @@ impl PathFile {
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathFile> {
         let abs = PathAbs::new(path)?;
-        PathFile::from_abs(abs)
+        PathFile::try_from(abs)
     }
 
-    /// Get the parent directory of this file as a `PathDir`.
+    /// Create a `PathFile` unchecked.
     ///
-    /// > This does not make aditional syscalls, as the parent by definition must be a directory
-    /// > and exist.
+    /// This is mostly used for constructing during tests, or if the path was previously validated.
+    /// This is effectively the same as a `Arc<PathBuf>`.
     ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::{PathDir, PathFile};
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// let lib = PathFile::new("src/lib.rs")?;
-    /// let src = lib.parent_dir().unwrap();
-    /// assert_eq!(PathDir::new("src")?, src);
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    pub fn parent_dir(&self) -> Option<PathDir> {
-        match self.parent() {
-            Ok(path) => Some(PathDir(PathAbs(Arc::new(path.to_path_buf())))),
-            Err(_) => None,
-        }
+    /// > Note: This is memory safe, so is not marked `unsafe`. However, it could cause
+    /// > panics in some methods if the path was not properly validated.
+    pub fn new_unchecked<P: Into<Arc<PathBuf>>>(path: P) -> PathFile {
+        PathFile(PathAbs::new_unchecked(path))
     }
 
-    /// Consume the `PathAbs` validating that the path is a file and returning `PathFile`. The file
-    /// must exist or `io::Error` will be returned.
+    /// Convert a `PathAbs` into a `PathFile`, first validating that the path is a file.
     ///
-    /// If the path is actually a dir returns `io::ErrorKind::InvalidInput`.
+    /// # Error
+    /// If the path is not a file.
     ///
     /// # Examples
     /// ```rust
@@ -72,12 +60,13 @@ impl PathFile {
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let lib_abs = PathAbs::new("src/lib.rs")?;
-    /// let lib_file = PathFile::from_abs(lib_abs)?;
+    /// let lib_file = PathFile::try_from(lib_abs)?;
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn from_abs(abs: PathAbs) -> Result<PathFile> {
+    pub fn try_from<P: Into<PathAbs>>(path: P) -> Result<PathFile> {
+        let abs = path.into();
         if abs.is_file() {
-            Ok(PathFile::from_abs_unchecked(abs))
+            Ok(PathFile::new_unchecked(abs))
         } else {
             Err(Error::new(
                 io::Error::new(io::ErrorKind::InvalidInput, "path is not a file"),
@@ -87,13 +76,29 @@ impl PathFile {
         }
     }
 
-    #[inline(always)]
-    /// Do the conversion _without checking_.
+    /// Get the parent directory of this file as a `PathDir`.
     ///
-    /// This is typically used by external libraries when the type is already known
-    /// through some other means (to avoid a syscall).
-    pub fn from_abs_unchecked(abs: PathAbs) -> PathFile {
-        PathFile(abs)
+    /// > This does not make aditional syscalls, as the parent by definition must be a directory
+    /// > and exist.
+    ///
+    /// # Panics
+    /// Panics if there is no parent. The only way this could happen is if
+    /// it was constructed with `new_unchecked` using a relative path.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # extern crate path_abs;
+    /// use path_abs::{PathDir, PathFile};
+    ///
+    /// # fn try_main() -> ::std::io::Result<()> {
+    /// let lib = PathFile::new("src/lib.rs")?;
+    /// let src = lib.parent_dir();
+    /// assert_eq!(PathDir::new("src")?, src);
+    /// # Ok(()) } fn main() { try_main().unwrap() }
+    /// ```
+    pub fn parent_dir(&self) -> PathDir {
+        let path = self.parent().expect("PathFile did not have a parent.");
+        PathDir::new_unchecked(PathAbs::new_unchecked(path.to_path_buf()))
     }
 
     /// Instantiate a new `PathFile`, creating an empty file if it doesn't exist.
@@ -456,18 +461,17 @@ impl PathFile {
     pub fn canonicalize(&self) -> Result<PathFile> {
         Ok(PathFile(self.0.canonicalize()?))
     }
-
-    /// Create a mock file type. *For use in tests only*.
-    ///
-    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
-    pub fn mock<P: AsRef<Path>>(path: P) -> PathFile {
-        PathFile(PathAbs::mock(path))
-    }
 }
 
 impl fmt::Debug for PathFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl AsRef<ffi::OsStr> for PathFile {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.0.as_ref()
     }
 }
 

@@ -99,7 +99,7 @@ impl<'de> Deserialize<'de> for PathFile {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathFile::from_abs(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
+        PathFile::try_from(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 
@@ -109,7 +109,7 @@ impl<'de> Deserialize<'de> for PathDir {
         D: Deserializer<'de>,
     {
         let abs = PathAbs::deserialize(deserializer)?;
-        PathDir::from_abs(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
+        PathDir::try_from(abs).map_err(|err| serde::de::Error::custom(&err.to_string()))
     }
 }
 

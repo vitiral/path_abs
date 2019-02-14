@@ -156,50 +156,20 @@ impl PathAbs {
         Ok(PathAbs(Arc::new(res)))
     }
 
-    /// Resolve the `PathAbs` as a `PathFile`. Return an error if it is not a file.
-    pub fn into_file(self) -> Result<PathFile> {
-        PathFile::from_abs(self)
-    }
-
-    /// Resolve the `PathAbs` as a `PathDir`. Return an error if it is not a directory.
-    pub fn into_dir(self) -> Result<PathDir> {
-        PathDir::from_abs(self)
+    /// Create a PathAbs unchecked.
+    ///
+    /// This is mostly used for constructing during tests, or if the path was previously validated.
+    /// This is effectively the same as a `Arc<PathBuf>`.
+    ///
+    /// > Note: This is memory safe, so is not marked `unsafe`. However, it could cause
+    /// > panics in some methods if the path was not properly validated.
+    pub fn new_unchecked<P: Into<Arc<PathBuf>>>(path: P) -> PathAbs {
+        PathAbs(path.into())
     }
 
     /// Return a reference to a basic `std::path::Path`
     pub fn as_path(&self) -> &Path {
         self.as_ref()
-    }
-
-    /// For constructing mocked paths during tests. This is effectively the same as a `PathBuf`.
-    ///
-    /// This is NOT checked for validity so the file may or may not actually exist and will
-    /// NOT be, in any way, an absolute or canonicalized path.
-    ///
-    /// # Examples
-    /// ```rust
-    /// # extern crate path_abs;
-    /// use path_abs::{PathAbs, PathInfo};
-    ///
-    /// # fn try_main() -> ::std::io::Result<()> {
-    /// // this file exist
-    /// let lib = PathAbs::new("src/lib.rs")?;
-    ///
-    /// let lib_mocked = PathAbs::mock("src/lib.rs");
-    ///
-    /// // in this case, the mocked file exists
-    /// assert!(lib_mocked.exists());
-    ///
-    /// // However, it is NOT equivalent to `lib`
-    /// assert_ne!(lib, lib_mocked);
-    ///
-    /// // this file doesn't exist at all
-    /// let dne = PathAbs::mock("src/dne.rs");
-    /// assert!(!dne.exists());
-    /// # Ok(()) } fn main() { try_main().unwrap() }
-    /// ```
-    pub fn mock<P: AsRef<Path>>(fake_path: P) -> PathAbs {
-        PathAbs(Arc::new(fake_path.as_ref().to_path_buf()))
     }
 }
 
@@ -213,8 +183,8 @@ impl PathMut for PathAbs {
     fn append<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         self.0.append(path)
     }
-    fn truncate_to_parent(&mut self) -> Result<()> {
-        self.0.truncate_to_parent()
+    fn pop_up(&mut self) -> Result<()> {
+        self.0.pop_up()
     }
     fn truncate_to_root(&mut self) {
         self.0.truncate_to_root()
@@ -240,6 +210,12 @@ impl PathOps for PathAbs {
 
     fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
         PathAbs(self.0.with_extension(extension))
+    }
+}
+
+impl AsRef<ffi::OsStr> for PathAbs {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.0.as_ref().as_ref()
     }
 }
 

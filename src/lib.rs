@@ -13,10 +13,11 @@
 //! This includes:
 //!
 //! - Cleaner _absolute_ paths (which is distinct from canonicalized paths).
-//! - Improved error messages, see the **Better Errors** section.
-//! - Improved type safety. The types specify that a file/dir _once_ existed and was _once_ a certain
-//!   type. Obviously a file/dir can be deleted/changed by another process.
-//! - More stringent mutability requirements. See the **Differing Method Signatures** section.
+//! - Improved error messages, see the [Better Errors](#better-errors) section.
+//! - Improved type safety. The types specify that a file/dir _once_ existed and was _once_ a
+//!   certain type. Obviously a file/dir can be deleted/changed by another process.
+//! - More stringent mutability requirements. See the
+//!   [Differing Method Signatures](#differing-method-signatures) section.
 //! - Cheap cloning: all path types are `Arc`, which a cheap operation compared to filesystem
 //!   operations and allows more flexibility and ergonomics in the library for relatively low cost.
 //!
@@ -180,12 +181,8 @@
 //!     ?
 //!     .unwrap_file();
 //!
-//! // Or use `PathAbs::into_file`
-//! let file2 = abs.clone().into_file()?;
-//!
 //! assert!(abs.is_file());
 //! assert!(file.is_file());
-//! assert!(file2.is_file());
 //!
 //! // ----------------------------------
 //! // Opening a File
@@ -225,7 +222,7 @@ use std::ffi;
 use std::fmt;
 use std::fs;
 use std::io;
-use std::path;
+use std::path::{self, Component, Components};
 use std_prelude::*;
 
 mod abs;
@@ -411,7 +408,11 @@ pub trait PathInfo {
         Path::extension(self.as_path())
     }
 
-    fn components(&self) -> path::Components<'_> {
+    fn join<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        Path::join(self.as_path(), path)
+    }
+
+    fn components(&self) -> Components<'_> {
         Path::components(self.as_path())
     }
 
@@ -507,6 +508,18 @@ pub trait PathInfo {
     }
 }
 
+// impl<T> PathInfo for T
+// where
+//     T: AsRef<Path>
+// {
+//     fn as_path(&self) -> &Path {
+//         PathBuf::as_path(self.borrow())
+//     }
+//     fn to_arc_pathbuf(&self) -> Arc<PathBuf> {
+//         self.clone().into()
+//     }
+// }
+
 impl<T> PathInfo for T
 where
     T: Clone + Borrow<PathBuf> + Into<Arc<PathBuf>>,
@@ -532,7 +545,7 @@ impl PathInfo for Path {
 ///
 /// These methods are not implemented for all `path_abs` types because they
 /// may break the type's invariant. For example, if you could call
-/// `truncate_to_parent()` on a `PathFile`, it would no longer be the path to
+/// `pop_up()` on a `PathFile`, it would no longer be the path to
 /// a file, but the path to a directory.
 ///
 /// As a general rule, methods that can return an error will return a rich
@@ -545,33 +558,40 @@ pub trait PathMut: PathInfo {
     /// like [`PathBuf::push`], so absolute paths won't wholly replace the
     /// current path.
     ///
+    /// `..` components are resolved using [`pop_up`], which can consume components
+    /// on `self`
+    ///
     /// # Errors
     ///
-    /// This method returns an error if the `path` parameter contains a prefix
-    /// component (on Windows, like `C:`), or enough `..` components to consume
-    /// this path.
+    /// This method returns an error if the result would try to go outside a filesystem root,
+    /// like `/` on Unix or `C:\` on Windows.
     ///
     /// # Example
     ///
     /// ```rust
-    /// use std::path::Path;
+    /// use std::path::PathBuf;
     /// use path_abs::PathMut;
     ///
-    /// let mut somepath = Path::new("foo").to_path_buf();
+    /// let mut somepath = PathBuf::from("foo");
     /// somepath.append("bar");
     ///
-    /// assert_eq!(somepath.as_path(), Path::new("foo/bar"));
+    /// assert_eq!(somepath, PathBuf::from("foo/bar"));
     /// ```
     ///
+    /// [`pop_up`]: trait.PathMut.html#method.pop_up
     /// [`PathBuf::push`]: https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html#method.push
     fn append<P: AsRef<Path>>(&mut self, path: P) -> Result<()>;
 
-    /// Removes the last component of this path.
+    /// Go "up" one directory.
+    ///
+    /// This removes the last component of this path. It also resolves any `..` that exist at the
+    /// _end_ of the path until a real item can be truncated. If the path is relative, and no
+    /// items remain then a `..` is appended to the path.
     ///
     /// # Errors
     ///
-    /// This method returns an error if this path has no parent, i.e. it
-    /// represents a filesystem root, like `/` on Unix or `C:\` on Windows.
+    /// This method returns an error if the result would try to go outside a filesystem root,
+    /// like `/` on Unix or `C:\` on Windows.
     ///
     /// # Example
     ///
@@ -582,12 +602,41 @@ pub trait PathMut: PathInfo {
     ///
     /// let executable = Path::new("/usr/loca/bin/myapp");
     /// let mut install_path = executable.to_path_buf();
-    /// install_path.truncate_to_parent()?;
+    /// install_path.pop_up()?;
     ///
     /// assert_eq!(install_path.as_path(), Path::new("/usr/local/bin"));
     /// # Ok(()) }
     /// ```
-    fn truncate_to_parent(&mut self) -> Result<()>;
+    ///
+    /// Example handling weird relative paths
+    ///
+    /// ```rust
+    /// # fn example() -> Result<(), path_abs::Error> {
+    /// use std::path::Path;
+    /// use path_abs::PathMut;
+    ///
+    /// let executable = Path::new("../../weird/../relative/path/../../");
+    /// let mut install_path = executable.to_path_buf();
+    /// install_path.pop_up()?;
+    ///
+    /// assert_eq!(install_path.as_path(), Path::new("../../../"));
+    /// # Ok(()) }
+    /// ```
+    ///
+    /// Error use case
+    ///
+    /// ```rust
+    /// # fn example() -> Result<(), path_abs::Error> {
+    /// use std::path::Path;
+    /// use path_abs::PathMut;
+    ///
+    /// let tmp = Path::new("/tmp");
+    /// let mut relative = tmp.to_path_buf();
+    /// relative.pop_up()?;
+    /// assert!(relative.pop_up().is_err());
+    /// # Ok(()) }
+    /// ```
+    fn pop_up(&mut self) -> Result<()>;
 
     /// Removes all components after the root, if any.
     ///
@@ -597,13 +646,13 @@ pub trait PathMut: PathInfo {
     /// # Example
     ///
     /// ```no_run
-    /// use std::path::Path;
+    /// use std::path::PathBuf;
     /// use path_abs::PathMut;
     ///
-    /// let mut somepath = Path::new(r"C:\foo\bar").to_path_buf();
+    /// let mut somepath = PathBuf::from(r"C:\foo\bar");
     /// somepath.truncate_to_root();
     ///
-    /// assert_eq!(somepath.as_path(), Path::new(r"C:\"));
+    /// assert_eq!(somepath, PathBuf::from(r"C:\"));
     /// ```
     fn truncate_to_root(&mut self);
 
@@ -616,33 +665,75 @@ impl PathMut for PathBuf {
     fn append<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         for each in path.as_ref().components() {
             match each {
-                path::Component::Normal(c) => self.push(c),
-                path::Component::CurDir => (), // "." does nothing
-                path::Component::Prefix(_) => {
+                Component::Normal(c) => self.push(c),
+                Component::CurDir => (), // "." does nothing
+                Component::Prefix(_) => {
                     return Err(Error::new(
                         io::Error::new(io::ErrorKind::Other, "appended path has a prefix"),
                         "appending path",
                         path.as_ref().to_path_buf().into(),
                     ));
                 }
-                path::Component::RootDir => (), // leading "/" does nothing
-                path::Component::ParentDir => self.truncate_to_parent()?,
+                Component::RootDir => (), // leading "/" does nothing
+                Component::ParentDir => self.pop_up()?,
             }
         }
 
         Ok(())
     }
 
-    fn truncate_to_parent(&mut self) -> Result<()> {
+    fn pop_up(&mut self) -> Result<()> {
+        /// Pop off the parent components and return how
+        /// many were removed.
+        fn pop_parent_components(p: &mut PathBuf) -> usize {
+            let mut cur_dirs: usize = 0;
+            let mut parents: usize = 0;
+            let mut components = p.components();
+            while let Some(c) = components.next_back() {
+                match c {
+                    Component::CurDir => cur_dirs += 1,
+                    Component::ParentDir => parents += 1,
+                    _ => break,
+                }
+            }
+            for _ in 0..(cur_dirs+parents) {
+                p.pop();
+            }
+            parents
+        }
+
+        let mut ending_parents = 0;
+        loop {
+            ending_parents += pop_parent_components(self);
+            if ending_parents == 0 || self.file_name().is_none() {
+                break;
+            } else {
+                // we have at least one "parent" to consume
+                self.pop();
+                ending_parents -= 1;
+            }
+        }
+
         if self.pop() {
-            Ok(())
-        } else {
-            Err(Error::new(
-                io::Error::new(io::ErrorKind::NotFound, "path has no parent"),
+            // do nothing, success
+        } else if self.has_root() {
+            // We tried to pop off the root
+            return Err(Error::new(
+                io::Error::new(io::ErrorKind::NotFound, "cannot get parent of root path"),
                 "truncating to parent",
                 self.clone().into(),
-            ))
+            ));
+        } else {
+            // we are creating a relative path, `"../"`
+            self.push("..")
         }
+
+        // Put all unhandled parents back, creating a relative path.
+        for _ in 0..ending_parents {
+            self.push("..")
+        }
+
+        Ok(())
     }
 
     fn truncate_to_root(&mut self) {
@@ -650,7 +741,7 @@ impl PathMut for PathBuf {
         for component in self.components().take(2) {
             match component {
                 // We want to keep prefix and RootDir components of this path
-                path::Component::Prefix(_) | path::Component::RootDir => res.push(component),
+                Component::Prefix(_) | Component::RootDir => res.push(component),
                 // We want to discard all other components.
                 _ => break,
             }
@@ -673,8 +764,8 @@ impl PathMut for Arc<PathBuf> {
     fn append<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         Arc::make_mut(self).append(path)
     }
-    fn truncate_to_parent(&mut self) -> Result<()> {
-        Arc::make_mut(self).truncate_to_parent()
+    fn pop_up(&mut self) -> Result<()> {
+        Arc::make_mut(self).pop_up()
     }
     fn truncate_to_root(&mut self) {
         Arc::make_mut(self).truncate_to_root()
@@ -709,13 +800,12 @@ pub trait PathOps: PathInfo {
     ///
     /// Note that this method represents pure concatenation, not "adjoinment"
     /// like [`PathBuf::join`], so absolute paths won't wholly replace the
-    /// current path.
+    /// current path. See [`append`] for more information about how it works.
     ///
     /// # Errors
     ///
-    /// This method returns an error if the `path` parameter contains a prefix
-    /// component (on Windows, like `C:`), or enough `..` components to consume
-    /// this path.
+    /// This method returns an error if the result would try to go outside a filesystem root,
+    /// like `/` on Unix or `C:\` on Windows.
     ///
     /// # Example
     ///
@@ -736,6 +826,7 @@ pub trait PathOps: PathInfo {
     /// }
     /// ```
     ///
+    /// [`append`]: trait.PathMut.html#method.append
     /// [`PathBuf::join`]: https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html#method.join
     fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output>;
 
@@ -756,25 +847,67 @@ pub trait PathOps: PathInfo {
     fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output;
 }
 
-impl PathOps for PathBuf {
+// impl<T> PathOps for T
+// where
+//     T: PathInfo
+//
+// {
+//     type Output = PathBuf;
+//
+//     fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+//         let mut res = self.as_ref().to_owned();
+//         res.append(path)?;
+//         Ok(res)
+//     }
+//
+//     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+//         let mut res = self.as_ref().to_owned();
+//         res.set_file_name(file_name);
+//         res
+//     }
+//
+//     fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+//         let mut res = self.as_ref().to_owned();
+//         res.set_extension(extension);
+//         res
+//     }
+// }
+
+impl PathOps for Path {
     type Output = PathBuf;
 
     fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
-        let mut res = self.clone();
+        let mut res = self.to_owned();
         res.append(path)?;
         Ok(res)
     }
 
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
-        let mut res = self.clone();
+        let mut res = self.to_owned();
         res.set_file_name(file_name);
         res
     }
 
     fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
-        let mut res = self.clone();
+        let mut res = self.to_owned();
         res.set_extension(extension);
         res
+    }
+}
+
+impl PathOps for PathBuf {
+    type Output = PathBuf;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output> {
+        self.as_path().concat(path)
+    }
+
+    fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
+        self.as_path().with_file_name(file_name)
+    }
+
+    fn with_extension<S: AsRef<ffi::OsStr>>(&self, extension: S) -> Self::Output {
+        self.as_path().with_extension(extension)
     }
 }
 
@@ -855,17 +988,14 @@ mod tests {
 
         #[test]
         fn test_pathinfo_parent() {
-            let p = Path::new(r"C:\foo\bar").to_path_buf();
+            let p = PathBuf::from(r"C:\foo\bar");
 
             let actual = <PathBuf as PathInfo>::parent(&p).expect("could not find parent?");
-            let expected = Path::new(r"C:\foo").to_path_buf();
-
+            let expected = PathBuf::from(r"C:\foo");
             assert_eq!(actual, expected);
 
-            let p = Path::new(r"C:\").to_path_buf();
-
+            let p = PathBuf::from(r"C:\");
             let actual = <PathBuf as PathInfo>::parent(&p).expect_err("root has a parent?");
-
             assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
             assert_eq!(actual.action(), "truncating to parent");
             assert_eq!(actual.path(), Path::new(r"C:\"));
@@ -873,7 +1003,7 @@ mod tests {
 
         #[test]
         fn test_pathinfo_starts_with() {
-            let p = Path::new(r"foo\bar").to_path_buf();
+            let p = PathBuf::from(r"foo\bar");
 
             assert_eq!(
                 <PathBuf as PathInfo>::starts_with(&p, Path::new("foo")),
@@ -887,7 +1017,7 @@ mod tests {
 
         #[test]
         fn test_pathinfo_ends_with() {
-            let p = Path::new(r"foo\bar").to_path_buf();
+            let p = PathBuf::from(r"foo\bar");
 
             assert_eq!(
                 <PathBuf as PathInfo>::ends_with(&p, Path::new("foo")),
@@ -899,60 +1029,45 @@ mod tests {
         #[test]
         fn test_pathops_concat() {
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new("bar"))
                 .expect("Could not concat paths?");
-            let expected = Path::new(r"foo\bar").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\bar");
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new(r"bar\..\baz"))
                 .expect("Could not concat path with ..?");
-            let expected = Path::new(r"foo\baz").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\baz");
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat("..")
                 .expect("Could not cancel path with ..?");
-            let expected = Path::new(r"").to_path_buf();
-
+            let expected = PathBuf::from(r"");
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(r"..\..")
-                .expect_err("Could escape prefix with ..?");
-
-            assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
-            assert_eq!(actual.action(), "truncating to parent");
-            assert_eq!(actual.path(), Path::new(""));
+                .expect("Could not escape prefix with ..?");
+            let expected = PathBuf::from("../");
+            assert_eq!(actual, expected);
 
             let actual = Path::new(r"C:\foo")
-                .to_path_buf()
                 .concat(r"..\..")
                 .expect_err("Could escape root with ..?");
-
             assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
             assert_eq!(actual.action(), "truncating to parent");
             assert_eq!(actual.path(), Path::new(r"C:\"));
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new(r"\windows\system32"))
                 .expect("Could not concat path with RootDir?");
-            let expected = Path::new(r"foo\windows\system32").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\windows\system32");
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new(r"C:bar"))
                 .expect_err("Could concat path with prefix?");
-
             assert_eq!(actual.io_error().kind(), io::ErrorKind::Other);
             assert_eq!(actual.action(), "appending path");
             assert_eq!(actual.path(), Path::new(r"C:bar"));
@@ -960,39 +1075,33 @@ mod tests {
 
         #[test]
         fn test_pathmut_append() {
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new("bar"))
                 .expect("Could not append paths?");
-            let expected = Path::new(r"foo\bar").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\bar");
             assert_eq!(actual, expected);
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new(r"bar\..\baz"))
                 .expect("Could not append path with ..?");
-            let expected = Path::new(r"foo\baz").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\baz");
             assert_eq!(actual, expected);
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual.append("..").expect("Could not cancel path with ..?");
-            let expected = Path::new(r"").to_path_buf();
-
+            let expected = PathBuf::from(r"");
             assert_eq!(actual, expected);
 
-            let actual = Path::new("foo")
-                .to_path_buf()
+            let mut actual = PathBuf::from("foo");
+            actual
                 .append(r"..\..")
-                .expect_err("Could escape prefix with ..?");
+                .expect("Could not escape prefix with ..?");
+            let expected = PathBuf::from("../");
+            assert_eq!(actual, expected);
 
-            assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
-            assert_eq!(actual.action(), "truncating to parent");
-            assert_eq!(actual.path(), Path::new(""));
-
-            let actual = Path::new(r"C:\foo")
-                .to_path_buf()
+            let actual = PathBuf::from(r"C:\foo")
                 .append(r"..\..")
                 .expect_err("Could escape root with ..?");
 
@@ -1000,34 +1109,29 @@ mod tests {
             assert_eq!(actual.action(), "truncating to parent");
             assert_eq!(actual.path(), Path::new(r"C:\"));
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new(r"\windows\system32"))
                 .expect("Could not append RootDir to path?");
-            let expected = Path::new(r"foo\windows\system32").to_path_buf();
-
+            let expected = PathBuf::from(r"foo\windows\system32");
             assert_eq!(actual, expected);
 
-            let actual = Path::new("foo")
-                .to_path_buf()
+            let actual = PathBuf::from("foo")
                 .append(Path::new(r"C:bar"))
                 .expect_err("Could append prefix to path?");
-
             assert_eq!(actual.io_error().kind(), io::ErrorKind::Other);
             assert_eq!(actual.action(), "appending path");
             assert_eq!(actual.path(), Path::new(r"C:bar"));
         }
 
         #[test]
-        fn test_pathmut_truncate_to_parent() {
-            let mut p = Path::new(r"C:\foo\bar").to_path_buf();
-            p.truncate_to_parent().expect("could not find parent?");
-
+        fn test_pathmut_pop_up() {
+            let mut p = PathBuf::from(r"C:\foo\bar");
+            p.pop_up().expect("could not find parent?");
             assert_eq!(p.as_path(), Path::new(r"C:\foo"));
 
-            let mut p = Path::new(r"C:\").to_path_buf();
-            let actual = p.truncate_to_parent().expect_err("root has a parent?");
-
+            let mut p = PathBuf::from(r"C:\");
+            let actual = p.pop_up().expect_err("root has a parent?");
             assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
             assert_eq!(actual.action(), "truncating to parent");
             assert_eq!(actual.path(), Path::new(r"C:\"));
@@ -1035,19 +1139,19 @@ mod tests {
 
         #[test]
         fn test_pathmut_truncate_to_root() {
-            let mut p = Path::new(r"C:\foo\bar").to_path_buf();
+            let mut p = PathBuf::from(r"C:\foo\bar");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r"C:\"));
 
-            let mut p = Path::new(r"C:foo").to_path_buf();
+            let mut p = PathBuf::from(r"C:foo");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r"C:"));
 
-            let mut p = Path::new(r"\foo").to_path_buf();
+            let mut p = PathBuf::from(r"\foo");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r"\"));
 
-            let mut p = Path::new(r"foo").to_path_buf();
+            let mut p = PathBuf::from(r"foo");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r""));
         }
@@ -1055,25 +1159,31 @@ mod tests {
 
     #[cfg(not(windows))]
     mod unix {
+        // FIXME: is anything really unix specific?
+    }
+
+    mod any {
         use super::*;
 
         #[test]
         fn test_pathinfo_is_absolute() {
-            let p = Path::new("/foo/bar").to_path_buf();
+            let p = PathBuf::from("/foo/bar");
 
-            assert_eq!(<PathBuf as PathInfo>::is_absolute(&p), true,);
+
+            let expected = !cfg!(windows);
+            assert_eq!(<PathBuf as PathInfo>::is_absolute(&p), expected);
         }
 
         #[test]
         fn test_pathinfo_parent() {
-            let p = Path::new("/foo/bar").to_path_buf();
+            let p = PathBuf::from("/foo/bar");
 
             let actual = <PathBuf as PathInfo>::parent(&p).expect("could not find parent?");
-            let expected = Path::new("/foo").to_path_buf();
+            let expected = PathBuf::from("/foo");
 
             assert_eq!(actual, expected);
 
-            let p = Path::new("/").to_path_buf();
+            let p = PathBuf::from("/");
 
             let actual = <PathBuf as PathInfo>::parent(&p).expect_err("root has a parent?");
 
@@ -1084,7 +1194,7 @@ mod tests {
 
         #[test]
         fn test_pathinfo_starts_with() {
-            let p = Path::new("foo/bar").to_path_buf();
+            let p = PathBuf::from("foo/bar");
 
             assert_eq!(
                 <PathBuf as PathInfo>::starts_with(&p, Path::new("foo")),
@@ -1098,7 +1208,7 @@ mod tests {
 
         #[test]
         fn test_pathinfo_ends_with() {
-            let p = Path::new("foo/bar").to_path_buf();
+            let p = PathBuf::from("foo/bar");
 
             assert_eq!(
                 <PathBuf as PathInfo>::ends_with(&p, Path::new("foo")),
@@ -1110,40 +1220,33 @@ mod tests {
         #[test]
         fn test_pathops_concat() {
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new("bar"))
                 .expect("Could not concat paths?");
-            let expected = Path::new("foo/bar").to_path_buf();
+            let expected = PathBuf::from("foo/bar");
 
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new("bar/../baz"))
                 .expect("Could not concat path with ..?");
-            let expected = Path::new("foo/baz").to_path_buf();
+            let expected = PathBuf::from("foo/baz");
 
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat("..")
                 .expect("Could not cancel path with ..?");
-            let expected = Path::new(r"").to_path_buf();
+            let expected = PathBuf::from(r"");
 
             assert_eq!(actual, expected);
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat("../..")
-                .expect_err("Could escape prefix with ..?");
-
-            assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
-            assert_eq!(actual.action(), "truncating to parent");
-            assert_eq!(actual.path(), Path::new(""));
+                .expect("Could not prefix with ..?");
+            let expected = PathBuf::from(r"../");
+            assert_eq!(actual, expected);
 
             let actual = Path::new("/foo")
-                .to_path_buf()
                 .concat("../..")
                 .expect_err("Could escape root with ..?");
 
@@ -1152,10 +1255,9 @@ mod tests {
             assert_eq!(actual.path(), Path::new("/"));
 
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat(Path::new("/etc/passwd"))
                 .expect("Could not concat RootDir to path?");
-            let expected: PathBuf = Path::new("foo/etc/passwd").to_path_buf();
+            let expected: PathBuf = PathBuf::from("foo/etc/passwd");
 
             assert_eq!(actual, expected);
         }
@@ -1163,99 +1265,118 @@ mod tests {
         #[test]
         fn test_pathops_concat_relative() {
             let actual = Path::new("../foo")
-                .to_path_buf()
                 .concat("bar")
                 .expect("Could not create relative path with concat");
-            let expected = Path::new(r"../foo/bar").to_path_buf();
+            let expected = PathBuf::from(r"../foo/bar");
             assert_eq!(actual, expected);
 
             let actual = Path::new("../foo")
-                .to_path_buf()
                 .concat("..")
                 .expect("Could not create relative path with concat");
-            let expected = Path::new(r"..").to_path_buf();
+            let expected = PathBuf::from(r"..");
             assert_eq!(actual, expected);
 
-            // FIXME: fails with result being ""
             let actual = Path::new("../foo")
-                .to_path_buf()
                 .concat("../..")
                 .expect("Could not create relative path with concat");
-            let expected = Path::new(r"../..").to_path_buf();
+            let expected = PathBuf::from(r"../..");
+            assert_eq!(actual, expected);
+
+            let actual = Path::new("../foo/../bar")
+                .concat("../..")
+                .expect("Could not create relative path with concat");
+            let expected = PathBuf::from(r"../..");
+            assert_eq!(actual, expected);
+
+            let actual = Path::new("../foo/../bar/..")
+                .concat("../..")
+                .expect("Could not create relative path with concat");
+            let expected = PathBuf::from(r"../../..");
+            assert_eq!(actual, expected);
+
+            let actual = PathBuf::from("../foo/..")
+                .concat("../../baz")
+                .expect("Could not create relative path with concat");
+            let expected = PathBuf::from(r"../../../baz");
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn test_pathops_concat_cur() {
+            // just check that pahts don't normalize...
+            let actual = Path::new("foo/././..").as_os_str();
+            let expected = ffi::OsStr::new("foo/././..");
+            assert_eq!(actual, expected);
+
+            let actual = PathBuf::from("././foo/././..")
+                .concat("../bar")
+                .expect("Could not create relative path with concat");
+            let expected = PathBuf::from(r"../bar");
             assert_eq!(actual, expected);
         }
 
         #[test]
         fn test_pathops_concat_consume() {
-            // FIXME: fails that you aren't allowed to consume the parent
             let actual = Path::new("foo")
-                .to_path_buf()
                 .concat("../../bar")
                 .expect("Could not create relative path with concat");
-            let expected = Path::new(r"../bar").to_path_buf();
+            let expected = PathBuf::from(r"../bar");
             assert_eq!(actual, expected);
         }
 
         #[test]
         fn test_pathmut_append() {
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new("bar"))
                 .expect("Could not append paths?");
-            let expected = Path::new("foo/bar").to_path_buf();
-
+            let expected = PathBuf::from("foo/bar");
             assert_eq!(actual, expected);
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new("bar/../baz"))
                 .expect("Could not append path with ..?");
-            let expected = Path::new("foo/baz").to_path_buf();
-
+            let expected = PathBuf::from("foo/baz");
             assert_eq!(actual, expected);
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual.append("..").expect("Could not cancel path with ..?");
-            let expected = Path::new(r"").to_path_buf();
-
+            let expected = PathBuf::from(r"");
             assert_eq!(actual, expected);
 
-            let actual = Path::new("foo")
-                .to_path_buf()
+            let mut actual = PathBuf::from("foo");
+            actual
                 .append("../..")
-                .expect_err("Could escape prefix with ..?");
+                .expect("Could not escape prefix with ..?");
+            let expected = PathBuf::from("../");
+            assert_eq!(actual, expected);
 
-            assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
-            assert_eq!(actual.action(), "truncating to parent");
-            assert_eq!(actual.path(), Path::new(""));
-
-            let actual = Path::new("/foo")
-                .to_path_buf()
+            let actual = PathBuf::from("/foo")
                 .append("../..")
                 .expect_err("Could escape root with ..?");
-
             assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
             assert_eq!(actual.action(), "truncating to parent");
             assert_eq!(actual.path(), Path::new("/"));
 
-            let mut actual = Path::new("foo").to_path_buf();
+            let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new("/etc/passwd"))
                 .expect("Could not append RootDir to path?");
-            let expected: PathBuf = Path::new("foo/etc/passwd").to_path_buf();
+            let expected: PathBuf = PathBuf::from("foo/etc/passwd");
 
             assert_eq!(actual, expected);
         }
 
         #[test]
-        fn test_pathmut_truncate_to_parent() {
-            let mut p = Path::new("/foo/bar").to_path_buf();
-            p.truncate_to_parent().expect("could not find parent?");
+        fn test_pathmut_pop_up() {
+            let mut p = PathBuf::from("/foo/bar");
+            p.pop_up().expect("could not find parent?");
 
             assert_eq!(p.as_path(), Path::new("/foo"));
 
-            let mut p = Path::new("/").to_path_buf();
-            let actual = p.truncate_to_parent().expect_err("root has a parent?");
+            let mut p = PathBuf::from("/");
+            let actual = p.pop_up().expect_err("root has a parent?");
 
             assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
             assert_eq!(actual.action(), "truncating to parent");
@@ -1264,11 +1385,11 @@ mod tests {
 
         #[test]
         fn test_pathmut_truncate_to_root() {
-            let mut p = Path::new("/foo/bar").to_path_buf();
+            let mut p = PathBuf::from("/foo/bar");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new("/"));
 
-            let mut p = Path::new("foo/bar").to_path_buf();
+            let mut p = PathBuf::from("foo/bar");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(""));
         }

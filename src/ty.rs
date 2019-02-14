@@ -45,11 +45,12 @@ impl PathType {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathType> {
         let abs = PathAbs::new(&path)?;
-        PathType::from_abs(abs)
+        PathType::try_from(abs)
     }
 
     /// Consume the `PathAbs` returning the `PathType`.
-    pub fn from_abs(abs: PathAbs) -> Result<PathType> {
+    pub fn try_from<P: Into<PathAbs>>(path: P) -> Result<PathType> {
+        let abs = path.into();
         let ty = abs.metadata()?.file_type();
         if ty.is_file() {
             Ok(PathType::File(PathFile(abs)))
@@ -116,19 +117,11 @@ impl PathType {
             false
         }
     }
+}
 
-    /// Create a mock file type. *For use in tests only*.
-    ///
-    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
-    pub fn mock_file<P: AsRef<Path>>(path: P) -> PathType {
-        PathType::File(PathFile::mock(path))
-    }
-
-    /// Create a mock dir type. *For use in tests only*.
-    ///
-    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
-    pub fn mock_dir<P: AsRef<Path>>(path: P) -> PathType {
-        PathType::Dir(PathDir::mock(path))
+impl AsRef<ffi::OsStr> for PathType {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.0.as_ref().as_ref()
     }
 }
 

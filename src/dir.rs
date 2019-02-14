@@ -35,7 +35,18 @@ impl PathDir {
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> Result<PathDir> {
         let abs = PathAbs::new(path)?;
-        PathDir::from_abs(abs)
+        PathDir::try_from(abs)
+    }
+
+    /// Create a `PathDir` unchecked.
+    ///
+    /// This is mostly used for constructing during tests, or if the path was previously validated.
+    /// This is effectively the same as a `Arc<PathBuf>`.
+    ///
+    /// > Note: This is memory safe, so is not marked `unsafe`. However, it could cause
+    /// > panics in some methods if the path was not properly validated.
+    pub fn new_unchecked<P: Into<Arc<PathBuf>>>(path: P) -> PathDir {
+        PathDir(PathAbs::new_unchecked(path))
     }
 
     /// Returns the current working directory from the `env` as a `PathDir`.
@@ -74,12 +85,13 @@ impl PathDir {
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let src_abs = PathAbs::new("src")?;
-    /// let src_dir = PathDir::from_abs(src_abs)?;
+    /// let src_dir = PathDir::try_from(src_abs)?;
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn from_abs(abs: PathAbs) -> Result<PathDir> {
+    pub fn try_from<P: Into<PathAbs>>(path: P) -> Result<PathDir> {
+        let abs = path.into();
         if abs.is_dir() {
-            Ok(PathDir::from_abs_unchecked(abs))
+            Ok(PathDir::new_unchecked(abs))
         } else {
             Err(Error::new(
                 io::Error::new(io::ErrorKind::InvalidInput, "path is not a dir"),
@@ -87,15 +99,6 @@ impl PathDir {
                 abs.into(),
             ))
         }
-    }
-
-    #[inline(always)]
-    /// Do the conversion _without checking_.
-    ///
-    /// This is typically used by external libraries when the type is already known
-    /// through some other means (to avoid a syscall).
-    pub fn from_abs_unchecked(abs: PathAbs) -> PathDir {
-        PathDir(abs)
     }
 
     /// Instantiate a new `PathDir` to a directory, creating the directory if it doesn't exist.
@@ -349,13 +352,6 @@ impl PathDir {
             Err(_) => None,
         }
     }
-
-    /// Create a mock dir type. *For use in tests only*.
-    ///
-    /// See the docs for [`PathAbs::mock`](struct.PathAbs.html#method.mock)
-    pub fn mock<P: AsRef<Path>>(path: P) -> PathDir {
-        PathDir(PathAbs::mock(path))
-    }
 }
 
 /// An iterator over `PathType` objects, returned by `PathDir::list`.
@@ -389,6 +385,12 @@ impl ::std::iter::Iterator for ListDir {
 impl fmt::Debug for PathDir {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl AsRef<ffi::OsStr> for PathDir {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.0.as_ref()
     }
 }
 
