@@ -13,8 +13,7 @@ use std::io;
 use std_prelude::*;
 
 use super::open::FileOpen;
-use super::PathFile;
-use super::{Error, PathInfo, Result};
+use super::{Error, PathInfo, PathFile, PathAbs, Result};
 
 /// A read-only file handle with `path()` attached and improved error messages. Contains only the
 /// methods and trait implementations which are allowed by a read-only file.
@@ -35,7 +34,7 @@ use super::{Error, PathInfo, Result};
 /// let expected = "foo\nbar";
 /// file.write_str(expected)?;
 ///
-/// let mut read = FileRead::read(example)?;
+/// let mut read = FileRead::open(example)?;
 /// let mut s = String::new();
 /// read.read_to_string(&mut s)?;
 /// assert_eq!(expected, s);
@@ -45,17 +44,17 @@ pub struct FileRead(pub(crate) FileOpen);
 
 impl FileRead {
     /// Open the file as read-only.
-    pub fn read<P: AsRef<Path>>(path: P) -> Result<FileRead> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
         Ok(FileRead(FileOpen::open(path, options)?))
     }
 
     /// Shortcut to open the file if the path is already absolute.
-    pub(crate) fn read_path(path: PathFile) -> Result<FileRead> {
+    pub(crate) fn open_abs<P: Into<PathAbs>>(path: P) -> Result<FileRead> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
-        Ok(FileRead(FileOpen::open_path(path, options)?))
+        Ok(FileRead(FileOpen::open_abs(path, options)?))
     }
 
     /// Read what remains of the file to a `String`.

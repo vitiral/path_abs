@@ -152,7 +152,7 @@ impl PathFile {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn read_string(&self) -> Result<String> {
-        let mut f = self.read()?;
+        let mut f = self.open_read()?;
         f.read_string()
     }
 
@@ -179,7 +179,7 @@ impl PathFile {
         let mut options = fs::OpenOptions::new();
         options.create(true);
         options.truncate(true);
-        let mut f = FileWrite::open_path(self.clone(), options)?;
+        let mut f = FileWrite::open_abs(self.clone(), options)?;
         if s.is_empty() {
             return Ok(());
         }
@@ -208,7 +208,7 @@ impl PathFile {
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
     pub fn append_str(&self, s: &str) -> Result<()> {
-        let mut f = self.append()?;
+        let mut f = self.open_append()?;
         if s.is_empty() {
             return Ok(());
         }
@@ -234,14 +234,14 @@ impl PathFile {
     /// let expected = "foo\nbar";
     /// file.write_str(expected)?;
     ///
-    /// let mut read = file.read()?;
+    /// let mut read = file.open_read()?;
     /// let mut s = String::new();
     /// read.read_to_string(&mut s)?;
     /// assert_eq!(expected, s);
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn read(&self) -> Result<FileRead> {
-        FileRead::read_path(self.clone())
+    pub fn open_read(&self) -> Result<FileRead> {
+        FileRead::open_abs(self.clone())
     }
 
     /// Open the file as write-only in append mode.
@@ -262,16 +262,16 @@ impl PathFile {
     /// let expected = "foo\nbar\n";
     /// file.write_str("foo\n")?;
     ///
-    /// let mut append = file.append()?;
+    /// let mut append = file.open_append()?;
     /// append.write_all(b"bar\n")?;
     /// append.flush();
     /// assert_eq!(expected, file.read_string()?);
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn append(&self) -> Result<FileWrite> {
+    pub fn open_append(&self) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
-        FileWrite::open_path(self.clone(), options)
+        FileWrite::open_abs(self.clone(), options)
     }
 
     /// Open the file for editing (reading and writing).
@@ -291,7 +291,7 @@ impl PathFile {
     ///
     /// let expected = "foo\nbar";
     ///
-    /// let mut edit = file.edit()?;
+    /// let mut edit = file.open_edit()?;
     /// let mut s = String::new();
     ///
     /// edit.write_all(expected.as_bytes())?;
@@ -300,8 +300,8 @@ impl PathFile {
     /// assert_eq!(expected, s);
     /// # Ok(()) } fn main() { try_main().unwrap() }
     /// ```
-    pub fn edit(&self) -> Result<FileEdit> {
-        FileEdit::open_path(self.clone(), fs::OpenOptions::new())
+    pub fn open_edit(&self) -> Result<FileEdit> {
+        FileEdit::open_abs(self.clone(), fs::OpenOptions::new())
     }
 
     /// Copy the file to another location, including permission bits

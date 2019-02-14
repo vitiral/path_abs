@@ -188,13 +188,13 @@
 //! // Opening a File
 //!
 //! // open read-only using the PathFile method
-//! let read = file.read()?;
+//! let read = file.open_read()?;
 //!
 //! // Or use the type directly: open for appending
-//! let write = FileWrite::append(&file)?;
+//! let write = FileWrite::open_append(&file)?;
 //!
 //! // Open for read/write editing.
-//! let edit = file.edit()?;
+//! let edit = file.open_edit()?;
 //! # Ok(()) } fn main() { try_main().unwrap() }
 //! ```
 
@@ -978,7 +978,7 @@ mod tests {
                     escape(&foo)
                 )
             };
-            assert_match!(pat, foo.edit().unwrap_err())
+            assert_match!(pat, foo.open_edit().unwrap_err())
         }
     }
 
@@ -1155,11 +1155,6 @@ mod tests {
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r""));
         }
-    }
-
-    #[cfg(not(windows))]
-    mod unix {
-        // FIXME: is anything really unix specific?
     }
 
     mod any {
