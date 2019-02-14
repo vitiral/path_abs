@@ -141,7 +141,7 @@ mod windows {
 
     #[test]
     fn absolute_path_need_not_exist() {
-        ::setup();
+        crate::setup();
 
         // It's not likely this path would exist, but let's be sure.
         let raw_path = path::Path::new(r"C:\does\not\exist");
@@ -156,7 +156,7 @@ mod windows {
 
     #[test]
     fn absolute_path_cannot_go_above_root() {
-        ::setup();
+        crate::setup();
         let err = PathAbs::new(r"C:\foo\..\..").unwrap_err();
 
         assert_eq!(err.io_error().kind(), io::ErrorKind::NotFound);
@@ -167,7 +167,7 @@ mod windows {
 
     #[test]
     fn absolute_supports_root_only_relative_path() {
-        ::setup();
+        crate::setup();
         let actual = PathAbs::new(r"\foo").unwrap();
 
         let mut current_drive_root = path::PathBuf::new();
@@ -182,7 +182,7 @@ mod windows {
 
     #[test]
     fn absolute_supports_prefix_only_relative_path() {
-        ::setup();
+        crate::setup();
         let actual = PathAbs::new(r"C:foo").unwrap();
 
         let expected =
@@ -193,7 +193,7 @@ mod windows {
 
     #[test]
     fn absolute_accepts_bogus_prefix() {
-        ::setup();
+        crate::setup();
         let path = PathAbs::new(r"\\?\bogus\path\").unwrap();
 
         assert_eq!(path.as_os_str(), r"\\?\bogus\path");
