@@ -13,8 +13,7 @@ use std::io;
 use std_prelude::*;
 
 use super::open::FileOpen;
-use super::PathFile;
-use super::{Error, PathInfo, Result};
+use super::{Error, PathAbs, PathFile, PathInfo, Result};
 
 /// A write-only file handle with `path()` attached and improved error messages. Contains only the
 /// methods and trait implementations which are allowed by a write-only file.
@@ -50,12 +49,12 @@ impl FileWrite {
     }
 
     /// Shortcut to open the file if the path is already absolute.
-    pub(crate) fn open_path(
-        path_file: PathFile,
+    pub(crate) fn open_abs<P: Into<PathAbs>>(
+        path: P,
         mut options: fs::OpenOptions,
     ) -> Result<FileWrite> {
         options.write(true);
-        Ok(FileWrite(FileOpen::open_path(path_file, options)?))
+        Ok(FileWrite(FileOpen::open_abs(path, options)?))
     }
 
     /// Open the file in write-only mode, truncating it first if it exists and creating it
@@ -68,7 +67,7 @@ impl FileWrite {
     }
 
     /// Open the file for appending, creating it if it doesn't exist.
-    pub fn append<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
+    pub fn open_append<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.append(true);
         options.create(true);
@@ -77,7 +76,7 @@ impl FileWrite {
 
     /// Open the file for editing (reading and writing) but do not create it
     /// if it doesn't exist.
-    pub fn edit<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
+    pub fn open_edit<P: AsRef<Path>>(path: P) -> Result<FileWrite> {
         let mut options = fs::OpenOptions::new();
         options.read(true);
         FileWrite::open(path, options)

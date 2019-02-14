@@ -13,8 +13,7 @@ use std::io;
 use std_prelude::*;
 
 use super::open::FileOpen;
-use super::PathFile;
-use super::{Error, PathInfo, Result};
+use super::{Error, PathFile, PathAbs, PathInfo, Result};
 
 /// A read/write file handle with `path()` attached and improved error messages. Contains methods
 /// and trait implements for both readable _and_ writeable files.
@@ -53,10 +52,10 @@ impl FileEdit {
     }
 
     /// Shortcut to open the file if the path is already absolute.
-    pub(crate) fn open_path(path: PathFile, mut options: fs::OpenOptions) -> Result<FileEdit> {
+    pub(crate) fn open_abs<P: Into<PathAbs>>(path: P, mut options: fs::OpenOptions) -> Result<FileEdit> {
         options.write(true);
         options.read(true);
-        Ok(FileEdit(FileOpen::open_path(path, options)?))
+        Ok(FileEdit(FileOpen::open_abs(path, options)?))
     }
 
     /// Open the file in editing mode, truncating it first if it exists and creating it

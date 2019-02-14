@@ -11,8 +11,7 @@ use std::fmt;
 use std::fs;
 use std_prelude::*;
 
-use super::PathFile;
-use super::{Error, Result};
+use super::{Error, Result, PathAbs, PathFile};
 
 /// **INTERNAL TYPE: do not use directly.**
 ///
@@ -40,13 +39,14 @@ impl FileOpen {
     ///
     /// Typically you should use `PathFile::open` instead (i.e. `file.open(options)` or
     /// `file.read()`).
-    pub fn open_path(path: PathFile, options: fs::OpenOptions) -> Result<FileOpen> {
+    pub fn open_abs<P: Into<PathAbs>>(path: P, options: fs::OpenOptions) -> Result<FileOpen> {
+        let path = path.into();
         let file = options
             .open(&path)
             .map_err(|err| Error::new(err, "opening", path.clone().into()))?;
 
         Ok(FileOpen {
-            path: path,
+            path: PathFile::new_unchecked(path),
             file: file,
         })
     }
