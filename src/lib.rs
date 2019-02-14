@@ -1161,6 +1161,42 @@ mod tests {
         }
 
         #[test]
+        fn test_pathops_concat_relative() {
+            let actual = Path::new("../foo")
+                .to_path_buf()
+                .concat("bar")
+                .expect("Could not create relative path with concat");
+            let expected = Path::new(r"../foo/bar").to_path_buf();
+            assert_eq!(actual, expected);
+
+            let actual = Path::new("../foo")
+                .to_path_buf()
+                .concat("..")
+                .expect("Could not create relative path with concat");
+            let expected = Path::new(r"..").to_path_buf();
+            assert_eq!(actual, expected);
+
+            // FIXME: fails with result being ""
+            let actual = Path::new("../foo")
+                .to_path_buf()
+                .concat("../..")
+                .expect("Could not create relative path with concat");
+            let expected = Path::new(r"../..").to_path_buf();
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
+        fn test_pathops_concat_consume() {
+            // FIXME: fails that you aren't allowed to consume the parent
+            let actual = Path::new("foo")
+                .to_path_buf()
+                .concat("../../bar")
+                .expect("Could not create relative path with concat");
+            let expected = Path::new(r"../bar").to_path_buf();
+            assert_eq!(actual, expected);
+        }
+
+        #[test]
         fn test_pathmut_append() {
             let mut actual = Path::new("foo").to_path_buf();
             actual
