@@ -982,11 +982,11 @@ mod tests {
         }
     }
 
-    #[cfg(windows)]
+    #[cfg(test)]
     mod windows {
         use super::*;
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathinfo_parent() {
             let p = PathBuf::from(r"C:\foo\bar");
 
@@ -1001,7 +1001,7 @@ mod tests {
             assert_eq!(actual.path(), Path::new(r"C:\"));
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathinfo_starts_with() {
             let p = PathBuf::from(r"foo\bar");
 
@@ -1015,7 +1015,7 @@ mod tests {
             );
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathinfo_ends_with() {
             let p = PathBuf::from(r"foo\bar");
 
@@ -1026,7 +1026,7 @@ mod tests {
             assert_eq!(<PathBuf as PathInfo>::ends_with(&p, Path::new("bar")), true,);
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathops_concat() {
             let actual = Path::new("foo")
                 .concat(Path::new("bar"))
@@ -1073,7 +1073,7 @@ mod tests {
             assert_eq!(actual.path(), Path::new(r"C:bar"));
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathmut_append() {
             let mut actual = PathBuf::from("foo");
             actual
@@ -1124,7 +1124,7 @@ mod tests {
             assert_eq!(actual.path(), Path::new(r"C:bar"));
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathmut_pop_up() {
             let mut p = PathBuf::from(r"C:\foo\bar");
             p.pop_up().expect("could not find parent?");
@@ -1137,7 +1137,7 @@ mod tests {
             assert_eq!(actual.path(), Path::new(r"C:\"));
         }
 
-        #[test]
+        #[cfg_attr(windows, test)]
         fn test_pathmut_truncate_to_root() {
             let mut p = PathBuf::from(r"C:\foo\bar");
             p.truncate_to_root();

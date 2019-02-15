@@ -82,6 +82,10 @@ impl FileWrite {
         FileWrite::open(path, options)
     }
 
+    pub fn path(&self) -> &PathFile {
+        &self.0.path
+    }
+
     /// Attempts to sync all OS-internal metadata to disk.
     ///
     /// This function will attempt to ensure that all in-core data reaches the filesystem before
@@ -92,9 +96,9 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_all
     pub fn sync_all(&self) -> Result<()> {
-        self.file
+        self.0.file
             .sync_all()
-            .map_err(|err| Error::new(err, "syncing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "syncing", self.0.path.clone().into()))
     }
 
     /// This function is similar to sync_all, except that it may not synchronize file metadata to
@@ -105,9 +109,9 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_data
     pub fn sync_data(&self) -> Result<()> {
-        self.file
+        self.0.file
             .sync_data()
-            .map_err(|err| Error::new(err, "syncing data for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "syncing data for", self.0.path.clone().into()))
     }
 
     /// Truncates or extends the underlying file, updating the size of this file to become size.
@@ -119,9 +123,9 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
     pub fn set_len(&mut self, size: u64) -> Result<()> {
-        self.file
+        self.0.file
             .set_len(size)
-            .map_err(|err| Error::new(err, "setting len for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "setting len for", self.0.path.clone().into()))
     }
 
     /// Changes the permissions on the underlying file.
@@ -133,9 +137,9 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_permissions
     pub fn set_permissions(&mut self, perm: fs::Permissions) -> Result<()> {
-        self.file
+        self.0.file
             .set_permissions(perm)
-            .map_err(|err| Error::new(err, "setting permisions for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "setting permisions for", self.0.path.clone().into()))
     }
 
     /// Shortcut to `self.write_all(s.as_bytes())` with slightly
@@ -144,7 +148,7 @@ impl FileWrite {
         self.0
             .file
             .write_all(s.as_bytes())
-            .map_err(|err| Error::new(err, "writing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "writing", self.0.path.clone().into()))
     }
 
     /// `std::io::File::flush` buth with the new error type.
@@ -152,14 +156,14 @@ impl FileWrite {
         self.0
             .file
             .flush()
-            .map_err(|err| Error::new(err, "flushing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "flushing", self.0.path.clone().into()))
     }
 }
 
 impl fmt::Debug for FileWrite {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileWrite(")?;
-        self.path.fmt(f)?;
+        self.0.path.fmt(f)?;
         write!(f, ")")
     }
 }
@@ -228,14 +232,6 @@ impl<'a> Borrow<FileOpen> for &'a FileWrite {
 impl<'a> Borrow<File> for &'a FileWrite {
     fn borrow(&self) -> &File {
         self.0.borrow()
-    }
-}
-
-impl Deref for FileWrite {
-    type Target = FileOpen;
-
-    fn deref(&self) -> &FileOpen {
-        &self.0
     }
 }
 

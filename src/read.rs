@@ -57,13 +57,17 @@ impl FileRead {
         Ok(FileRead(FileOpen::open_abs(path, options)?))
     }
 
+    pub fn path(&self) -> &PathFile {
+        &self.0.path
+    }
+
     /// Read what remains of the file to a `String`.
     pub fn read_string(&mut self) -> Result<String> {
         let mut s = String::new();
         self.0
             .file
             .read_to_string(&mut s)
-            .map_err(|err| Error::new(err, "reading", self.path.clone().into()))?;
+            .map_err(|err| Error::new(err, "reading", self.0.path.clone().into()))?;
         Ok(s)
     }
 }
@@ -71,7 +75,7 @@ impl FileRead {
 impl fmt::Debug for FileRead {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileRead(")?;
-        self.path.fmt(f)?;
+        self.0.path.fmt(f)?;
         write!(f, ")")
     }
 }
@@ -131,14 +135,6 @@ impl<'a> Borrow<FileOpen> for &'a FileRead {
 impl<'a> Borrow<File> for &'a FileRead {
     fn borrow(&self) -> &File {
         self.0.borrow()
-    }
-}
-
-impl Deref for FileRead {
-    type Target = FileOpen;
-
-    fn deref(&self) -> &FileOpen {
-        &self.0
     }
 }
 

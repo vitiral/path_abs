@@ -121,7 +121,7 @@ impl PathType {
 
 impl AsRef<ffi::OsStr> for PathType {
     fn as_ref(&self) -> &std::ffi::OsStr {
-        self.0.as_ref().as_ref()
+        self.as_ref()
     }
 }
 
@@ -145,15 +145,6 @@ impl AsRef<PathBuf> for PathType {
     fn as_ref(&self) -> &PathBuf {
         let r: &PathAbs = self.as_ref();
         r.as_ref()
-    }
-}
-
-impl Deref for PathType {
-    type Target = PathAbs;
-
-    fn deref(&self) -> &PathAbs {
-        let r: &PathAbs = self.as_ref();
-        r
     }
 }
 

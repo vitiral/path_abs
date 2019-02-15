@@ -96,7 +96,7 @@ impl FileEdit {
         self.0
             .file
             .sync_all()
-            .map_err(|err| Error::new(err, "syncing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "syncing", self.0.path.clone().into()))
     }
 
     /// This function is similar to sync_all, except that it may not synchronize file metadata to
@@ -110,7 +110,7 @@ impl FileEdit {
         self.0
             .file
             .sync_data()
-            .map_err(|err| Error::new(err, "syncing data for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "syncing data for", self.0.path.clone().into()))
     }
 
     /// Truncates or extends the underlying file, updating the size of this file to become size.
@@ -125,7 +125,7 @@ impl FileEdit {
         self.0
             .file
             .set_len(size)
-            .map_err(|err| Error::new(err, "setting len for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "setting len for", self.0.path.clone().into()))
     }
 
     /// Changes the permissions on the underlying file.
@@ -140,7 +140,7 @@ impl FileEdit {
         self.0
             .file
             .set_permissions(perm)
-            .map_err(|err| Error::new(err, "setting permisions for", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "setting permisions for", self.0.path.clone().into()))
     }
 
     /// Read what remains of the file to a `String`.
@@ -149,7 +149,7 @@ impl FileEdit {
         self.0
             .file
             .read_to_string(&mut s)
-            .map_err(|err| Error::new(err, "reading", self.path.clone().into()))?;
+            .map_err(|err| Error::new(err, "reading", self.0.path.clone().into()))?;
         Ok(s)
     }
 
@@ -159,7 +159,7 @@ impl FileEdit {
         self.0
             .file
             .write_all(s.as_bytes())
-            .map_err(|err| Error::new(err, "writing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "writing", self.0.path.clone().into()))
     }
 
     /// `std::io::File::flush` buth with the new error type.
@@ -167,14 +167,14 @@ impl FileEdit {
         self.0
             .file
             .flush()
-            .map_err(|err| Error::new(err, "flushing", self.path.clone().into()))
+            .map_err(|err| Error::new(err, "flushing", self.0.path.clone().into()))
     }
 }
 
 impl fmt::Debug for FileEdit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileEdit(")?;
-        self.path.fmt(f)?;
+        self.0.path.fmt(f)?;
         write!(f, ")")
     }
 }
@@ -184,7 +184,7 @@ impl io::Read for FileEdit {
         self.0.file.read(buf).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when reading {}", err, self.path().display()),
+                format!("{} when reading {}", err, self.0.path().display()),
             )
         })
     }
@@ -195,7 +195,7 @@ impl io::Write for FileEdit {
         self.0.file.write(buf).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when writing to {}", err, self.path().display()),
+                format!("{} when writing to {}", err, self.0.path().display()),
             )
         })
     }
@@ -204,7 +204,7 @@ impl io::Write for FileEdit {
         self.0.file.flush().map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} when flushing {}", err, self.path().display()),
+                format!("{} when flushing {}", err, self.0.path().display()),
             )
         })
     }
@@ -215,7 +215,7 @@ impl io::Seek for FileEdit {
         self.0.file.seek(pos).map_err(|err| {
             io::Error::new(
                 err.kind(),
-                format!("{} seeking {}", err, self.path().display()),
+                format!("{} seeking {}", err, self.0.path().display()),
             )
         })
     }
@@ -254,14 +254,6 @@ impl<'a> Borrow<FileOpen> for &'a FileEdit {
 impl<'a> Borrow<File> for &'a FileEdit {
     fn borrow(&self) -> &File {
         &self.0.borrow()
-    }
-}
-
-impl Deref for FileEdit {
-    type Target = FileOpen;
-
-    fn deref(&self) -> &FileOpen {
-        &self.0
     }
 }
 

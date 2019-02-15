@@ -529,14 +529,6 @@ impl<'a> Borrow<PathBuf> for &'a PathFile {
     }
 }
 
-impl Deref for PathFile {
-    type Target = PathAbs;
-
-    fn deref(&self) -> &PathAbs {
-        &self.0
-    }
-}
-
 impl From<PathFile> for PathAbs {
     fn from(path: PathFile) -> PathAbs {
         path.0
