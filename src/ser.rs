@@ -8,9 +8,12 @@
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 use std::string::ToString;
 use std_prelude::*;
+use std::fmt;
 use stfu8;
 
-use std::ffi::OsString;
+use super::{PathOps, PathMut};
+
+use std::ffi::{OsStr, OsString};
 #[cfg(unix)]
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
 #[cfg(windows)]
@@ -18,9 +21,56 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use super::{PathAbs, PathDir, PathFile};
 
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct PathSer(Arc<PathBuf>);
 
-impl AsRef<std::ffi::OsStr> for PathSer {
+impl PathSer {
+    pub fn new<P: Into<Arc<PathBuf>>>(path: P) -> Self {
+        PathSer(path.into())
+    }
+}
+
+impl fmt::Debug for PathSer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl PathMut for PathSer {
+    fn append<P: AsRef<Path>>(&mut self, path: P) -> crate::Result<()> {
+        self.0.append(path)
+    }
+    fn pop_up(&mut self) -> crate::Result<()> {
+        self.0.pop_up()
+    }
+    fn truncate_to_root(&mut self) {
+        self.0.truncate_to_root()
+    }
+    fn set_file_name<S: AsRef<OsStr>>(&mut self, file_name: S) {
+        self.0.set_file_name(file_name)
+    }
+    fn set_extension<S: AsRef<OsStr>>(&mut self, extension: S) -> bool {
+        self.0.set_extension(extension)
+    }
+}
+
+impl PathOps for PathSer {
+    type Output = PathSer;
+
+    fn concat<P: AsRef<Path>>(&self, path: P) -> crate::Result<Self::Output> {
+        Ok(PathSer(self.0.concat(path)?))
+    }
+
+    fn with_file_name<S: AsRef<OsStr>>(&self, file_name: S) -> Self::Output {
+        PathSer(self.0.with_file_name(file_name))
+    }
+
+    fn with_extension<S: AsRef<OsStr>>(&self, extension: S) -> Self::Output {
+        PathSer(self.0.with_extension(extension))
+    }
+}
+
+impl AsRef<OsStr> for PathSer {
     fn as_ref(&self) -> &std::ffi::OsStr {
         self.0.as_ref().as_ref()
     }
@@ -59,6 +109,19 @@ impl<'a> Borrow<Path> for &'a PathSer {
 impl<'a> Borrow<PathBuf> for &'a PathSer {
     fn borrow(&self) -> &PathBuf {
         self.as_ref()
+    }
+}
+
+impl<P: AsRef<str>> From<P> for PathSer {
+    fn from(path: P) -> PathSer {
+        PathSer::new(PathBuf::from(path.as_ref()))
+    }
+}
+
+
+impl From<PathSer> for Arc<PathBuf> {
+    fn from(path: PathSer) -> Arc<PathBuf> {
+        path.0
     }
 }
 
@@ -178,7 +241,7 @@ impl<'de> Deserialize<'de> for PathDir {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PathDir, PathFile, PathOps, PathType};
+    use super::super::{PathDir, PathFile, PathOps, PathType, PathInfo, PathMut};
     use super::*;
 
     #[cfg(unix)]
@@ -228,5 +291,20 @@ mod tests {
 
         let result: Vec<PathType> = serde_json::from_str(&result_str).unwrap();
         assert_eq!(expected, result);
+    }
+
+    #[test]
+    /// Just test that it has all the methods.
+    fn sanity_ser() {
+        let mut path = PathSer::from("example/path");
+        assert_eq!(path.join("joined"), Path::new("example/path/joined"));
+        assert_eq!(path.is_absolute(), false);
+
+        path.append("appended").unwrap();
+        assert_eq!(path.as_path(), Path::new("example/path/appended"));
+        path.pop_up().unwrap();
+        assert_eq!(path.as_path(), Path::new("example/path"));
+
+        assert_eq!(path.concat("/concated").unwrap().as_path(), Path::new("example/path/concated"));
     }
 }
