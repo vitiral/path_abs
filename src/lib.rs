@@ -397,6 +397,14 @@ pub trait PathInfo {
         Path::file_name(self.as_path())
     }
 
+    fn strip_prefix<P>(&self, base: P) -> std::result::Result<&Path, path::StripPrefixError>
+        where
+            P: AsRef<Path>
+    {
+        Path::strip_prefix(self.as_path(), base)
+    }
+
+
     fn starts_with<P: AsRef<Path>>(&self, base: P) -> bool {
         Path::starts_with(self.as_path(), base)
     }
