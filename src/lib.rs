@@ -245,6 +245,8 @@ pub use crate::abs::PathAbs;
 pub use crate::dir::{ListDir, PathDir};
 pub use crate::file::PathFile;
 pub use crate::ty::PathType;
+#[cfg(feature = "serialize")]
+pub use crate::ser::PathSer;
 
 pub use crate::edit::FileEdit;
 pub use crate::read::FileRead;

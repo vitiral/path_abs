@@ -18,6 +18,56 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 
 use super::{PathAbs, PathDir, PathFile};
 
+pub struct PathSer(Arc<PathBuf>);
+
+impl AsRef<std::ffi::OsStr> for PathSer {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        self.0.as_ref().as_ref()
+    }
+}
+
+impl AsRef<Path> for PathSer {
+    fn as_ref(&self) -> &Path {
+        self.0.as_ref()
+    }
+}
+
+impl AsRef<PathBuf> for PathSer {
+    fn as_ref(&self) -> &PathBuf {
+        self.0.as_ref()
+    }
+}
+
+impl Borrow<Path> for PathSer {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+}
+
+impl Borrow<PathBuf> for PathSer {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<Path> for &'a PathSer {
+    fn borrow(&self) -> &Path {
+        self.as_ref()
+    }
+}
+
+impl<'a> Borrow<PathBuf> for &'a PathSer {
+    fn borrow(&self) -> &PathBuf {
+        self.as_ref()
+    }
+}
+
+impl From<PathAbs> for PathSer {
+    fn from(path: PathAbs) -> PathSer {
+        PathSer(path.0.clone())
+    }
+}
+
 trait ToStfu8 {
     fn to_stfu8(&self) -> String;
 }
@@ -77,9 +127,22 @@ macro_rules! stfu8_serialize {
     };
 }
 
+stfu8_serialize!(PathSer);
 stfu8_serialize!(PathAbs);
 stfu8_serialize!(PathFile);
 stfu8_serialize!(PathDir);
+
+impl<'de> Deserialize<'de> for PathSer {
+    fn deserialize<D>(deserializer: D) -> Result<PathSer, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let path =
+            PathBuf::from_stfu8(&s).map_err(|err| serde::de::Error::custom(&err.to_string()))?;
+        Ok(PathSer(Arc::new(path)))
+    }
+}
 
 impl<'de> Deserialize<'de> for PathAbs {
     fn deserialize<D>(deserializer: D) -> Result<PathAbs, D::Error>
