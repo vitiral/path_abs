@@ -142,29 +142,25 @@ fn test_forward_and_backward_slashes() {
 
 #[test]
 fn test_root_parent() {
-    let actual = PathAbs::new("/a/../..")
-        .expect_err("Can go outside of `/`?");
+    let actual = PathAbs::new("/a/../..").expect_err("Can go outside of `/`?");
     assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
     assert_eq!(actual.action(), "resolving absolute");
     assert_eq!(actual.path(), Path::new(r"/a/../.."));
 }
 
 #[cfg_attr(windows, test)]
-fn test_root_parent_windows() {
-    let actual = PathAbs::new(r"\a\..\..")
-        .expect_err(r"Can go outside of \?");
+fn _test_root_parent_windows() {
+    let actual = PathAbs::new(r"\a\..\..").expect_err(r"Can go outside of \?");
     assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
     assert_eq!(actual.action(), "resolving absolute");
     assert_eq!(actual.path(), Path::new(r"/a/../.."));
 
-    let actual = PathAbs::new(r"C:\a\..\..")
-        .expect_err(r"Can go outside of C:\?");
+    let actual = PathAbs::new(r"C:\a\..\..").expect_err(r"Can go outside of C:\?");
     assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
     assert_eq!(actual.action(), "resolving absolute");
     assert_eq!(actual.path(), Path::new(r"C:\a\..\.."));
 
-    let actual = PathAbs::new(r"\\?\C:\a\..\..")
-        .expect_err(r"Can go outside of \\?\C:\?");
+    let actual = PathAbs::new(r"\\?\C:\a\..\..").expect_err(r"Can go outside of \\?\C:\?");
     assert_eq!(actual.io_error().kind(), io::ErrorKind::NotFound);
     assert_eq!(actual.action(), "resolving absolute");
     assert_eq!(actual.path(), Path::new(r"\\?\C:\a\..\.."));

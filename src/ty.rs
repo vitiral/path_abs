@@ -121,7 +121,7 @@ impl PathType {
 
 impl AsRef<ffi::OsStr> for PathType {
     fn as_ref(&self) -> &std::ffi::OsStr {
-        self.as_ref()
+        self.as_path().as_ref()
     }
 }
 

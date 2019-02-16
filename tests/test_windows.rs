@@ -151,4 +151,3 @@ fn canonicalize_unc() {
 fn canonicalize_disk() {
     expect_path!(r"\\?\C:\", r"C:\")
 }
-

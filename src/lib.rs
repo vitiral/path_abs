@@ -12,6 +12,7 @@
 //!
 //! This includes:
 //!
+//! - Improved methods for the `std` path types using [`PathInfo`] [`PathMut`] and [`PathOps`]
 //! - Cleaner _absolute_ paths (which is distinct from canonicalized paths).
 //! - Improved error messages, see the [Better Errors](#better-errors) section.
 //! - Improved type safety. The types specify that a file/dir _once_ existed and was _once_ a
@@ -36,10 +37,10 @@
 //! > The above error is actually impossible because `FileWrite` is always writeable, and
 //! > `FileRead` does not implement `set_len`. However, it is kept for demonstration.
 //!
-//! ### `read` (open file for reading):
+//! ### `open_read` (open file for reading):
 //!
 //! - [`/**/ std::fs::File::read(path)`][file_read]: `No such file or directory (os error 2)`
-//! - [`path_abs::FileRead::read(path)`][path_read]: `No such file or directory (os error 2) when
+//! - [`path_abs::FileRead::open(path)`][path_read]: `No such file or directory (os error 2) when
 //!   opening example/foo.txt`
 //!
 //! And every other method has similarily improved errors. If a method does not have pretty error
@@ -48,7 +49,7 @@
 //! [file_set_len]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
 //! [file_read]: https://doc.rust-lang.org/std/fs/struct.File.html#method.read
 //! [path_set_len]: struct.FileWrite.html#method.set_len
-//! [path_read]: struct.FileRead.html#method.read
+//! [path_read]: struct.FileRead.html#method.open
 //!
 //!
 //! ## Exported Path Types
@@ -197,6 +198,10 @@
 //! let edit = file.open_edit()?;
 //! # Ok(()) } fn main() { try_main().unwrap() }
 //! ```
+//!
+//! [`PathInfo`]: trait.PathInfo.html
+//! [`PathOps`]: trait.PathOps.html
+//! [`PathMut`]: trait.PathMut.html
 
 #[cfg(feature = "serialize")]
 extern crate serde;
@@ -508,6 +513,7 @@ pub trait PathInfo {
     }
 }
 
+// TODO: I would like to be able to do this.
 // impl<T> PathInfo for T
 // where
 //     T: AsRef<Path>
@@ -696,7 +702,7 @@ impl PathMut for PathBuf {
                     _ => break,
                 }
             }
-            for _ in 0..(cur_dirs+parents) {
+            for _ in 0..(cur_dirs + parents) {
                 p.pop();
             }
             parents
@@ -789,7 +795,7 @@ impl PathMut for Arc<PathBuf> {
 /// implement this trait may have different return types.
 ///
 /// [`PathInfo`]: trait.PathInfo.html
-/// [`PathMut`]: trait.PathInfo.html
+/// [`PathMut`]: trait.PathMut.html
 /// [`PathBuf`]: https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html
 /// [`path_abs::Error`]: struct.Error.html
 /// [`std::io::Error`]: https://doc.rust-lang.org/stable/std/io/struct.Error.html
@@ -987,7 +993,7 @@ mod tests {
         use super::*;
 
         #[cfg_attr(windows, test)]
-        fn test_pathinfo_parent() {
+        fn _test_pathinfo_parent() {
             let p = PathBuf::from(r"C:\foo\bar");
 
             let actual = <PathBuf as PathInfo>::parent(&p).expect("could not find parent?");
@@ -1002,7 +1008,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathinfo_starts_with() {
+        fn _test_pathinfo_starts_with() {
             let p = PathBuf::from(r"foo\bar");
 
             assert_eq!(
@@ -1016,7 +1022,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathinfo_ends_with() {
+        fn _test_pathinfo_ends_with() {
             let p = PathBuf::from(r"foo\bar");
 
             assert_eq!(
@@ -1027,7 +1033,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathops_concat() {
+        fn _test_pathops_concat() {
             let actual = Path::new("foo")
                 .concat(Path::new("bar"))
                 .expect("Could not concat paths?");
@@ -1074,7 +1080,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathmut_append() {
+        fn _test_pathmut_append() {
             let mut actual = PathBuf::from("foo");
             actual
                 .append(Path::new("bar"))
@@ -1125,7 +1131,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathmut_pop_up() {
+        fn _test_pathmut_pop_up() {
             let mut p = PathBuf::from(r"C:\foo\bar");
             p.pop_up().expect("could not find parent?");
             assert_eq!(p.as_path(), Path::new(r"C:\foo"));
@@ -1138,7 +1144,7 @@ mod tests {
         }
 
         #[cfg_attr(windows, test)]
-        fn test_pathmut_truncate_to_root() {
+        fn _test_pathmut_truncate_to_root() {
             let mut p = PathBuf::from(r"C:\foo\bar");
             p.truncate_to_root();
             assert_eq!(p.as_path(), Path::new(r"C:\"));
@@ -1163,7 +1169,6 @@ mod tests {
         #[test]
         fn test_pathinfo_is_absolute() {
             let p = PathBuf::from("/foo/bar");
-
 
             let expected = !cfg!(windows);
             assert_eq!(<PathBuf as PathInfo>::is_absolute(&p), expected);

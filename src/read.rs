@@ -13,7 +13,7 @@ use std::io;
 use std_prelude::*;
 
 use super::open::FileOpen;
-use super::{Error, PathInfo, PathFile, PathAbs, Result};
+use super::{Error, PathAbs, PathFile, PathInfo, Result};
 
 /// A read-only file handle with `path()` attached and improved error messages. Contains only the
 /// methods and trait implementations which are allowed by a read-only file.

@@ -13,7 +13,7 @@ use std::io;
 use std::path::{Component, PrefixComponent};
 use std_prelude::*;
 
-use super::{Error, PathDir, PathFile, PathMut, PathOps, Result};
+use super::{Error, PathMut, PathOps, Result};
 
 /// Converts any PrefixComponent into verbatim ("extended-length") form.
 fn make_verbatim_prefix(prefix: &PrefixComponent<'_>) -> Result<PathBuf> {

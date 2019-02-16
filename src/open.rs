@@ -11,7 +11,7 @@ use std::fmt;
 use std::fs;
 use std_prelude::*;
 
-use super::{Error, Result, PathAbs, PathFile};
+use super::{Error, PathAbs, PathFile, Result};
 
 /// **INTERNAL TYPE: do not use directly.**
 ///

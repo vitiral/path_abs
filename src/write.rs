@@ -96,7 +96,8 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_all
     pub fn sync_all(&self) -> Result<()> {
-        self.0.file
+        self.0
+            .file
             .sync_all()
             .map_err(|err| Error::new(err, "syncing", self.0.path.clone().into()))
     }
@@ -109,7 +110,8 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.sync_data
     pub fn sync_data(&self) -> Result<()> {
-        self.0.file
+        self.0
+            .file
             .sync_data()
             .map_err(|err| Error::new(err, "syncing data for", self.0.path.clone().into()))
     }
@@ -123,7 +125,8 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_len
     pub fn set_len(&mut self, size: u64) -> Result<()> {
-        self.0.file
+        self.0
+            .file
             .set_len(size)
             .map_err(|err| Error::new(err, "setting len for", self.0.path.clone().into()))
     }
@@ -137,7 +140,8 @@ impl FileWrite {
     ///
     /// [0]: https://doc.rust-lang.org/std/fs/struct.File.html#method.set_permissions
     pub fn set_permissions(&mut self, perm: fs::Permissions) -> Result<()> {
-        self.0.file
+        self.0
+            .file
             .set_permissions(perm)
             .map_err(|err| Error::new(err, "setting permisions for", self.0.path.clone().into()))
     }
