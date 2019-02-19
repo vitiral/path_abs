@@ -244,9 +244,9 @@ mod write;
 pub use crate::abs::PathAbs;
 pub use crate::dir::{ListDir, PathDir};
 pub use crate::file::PathFile;
-pub use crate::ty::PathType;
 #[cfg(feature = "serialize")]
 pub use crate::ser::PathSer;
+pub use crate::ty::PathType;
 
 pub use crate::edit::FileEdit;
 pub use crate::read::FileRead;
@@ -400,12 +400,11 @@ pub trait PathInfo {
     }
 
     fn strip_prefix<P>(&self, base: P) -> std::result::Result<&Path, path::StripPrefixError>
-        where
-            P: AsRef<Path>
+    where
+        P: AsRef<Path>,
     {
         Path::strip_prefix(self.as_path(), base)
     }
-
 
     fn starts_with<P: AsRef<Path>>(&self, base: P) -> bool {
         Path::starts_with(self.as_path(), base)
@@ -421,10 +420,6 @@ pub trait PathInfo {
 
     fn extension(&self) -> Option<&ffi::OsStr> {
         Path::extension(self.as_path())
-    }
-
-    fn join<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        Path::join(self.as_path(), path)
     }
 
     fn components(&self) -> Components<'_> {
@@ -846,6 +841,14 @@ pub trait PathOps: PathInfo {
     /// [`PathBuf::join`]: https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html#method.join
     fn concat<P: AsRef<Path>>(&self, path: P) -> Result<Self::Output>;
 
+    /// An exact replica of `std::path::Path::join` with all of its gotchas and pitfalls,, except
+    /// returns a more relevant type.
+    ///
+    /// In general, prefer [`concat`]
+    ///
+    /// [`concat`]: trait.PathOps.html#method.concat
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output;
+
     /// Creates a new path object like `self` but with the given file name.
     ///
     /// The same as [`std::path::Path::with_file_name()`], except that the
@@ -898,6 +901,10 @@ impl PathOps for Path {
         Ok(res)
     }
 
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        Path::join(self, path)
+    }
+
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
         let mut res = self.to_owned();
         res.set_file_name(file_name);
@@ -918,6 +925,10 @@ impl PathOps for PathBuf {
         self.as_path().concat(path)
     }
 
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        Path::join(self, path)
+    }
+
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
         self.as_path().with_file_name(file_name)
     }
@@ -934,6 +945,11 @@ impl PathOps for Arc<PathBuf> {
         let mut res = self.clone();
         Arc::make_mut(&mut res).append(path)?;
         Ok(res)
+    }
+
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        let buf = Path::join(self, path);
+        Arc::new(buf)
     }
 
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {

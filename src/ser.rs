@@ -6,12 +6,12 @@
  * copied, modified, or distributed except according to those terms.
  */
 use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
 use std::string::ToString;
 use std_prelude::*;
-use std::fmt;
 use stfu8;
 
-use super::{PathOps, PathMut};
+use super::{PathMut, PathOps};
 
 use std::ffi::{OsStr, OsString};
 #[cfg(unix)]
@@ -27,6 +27,10 @@ pub struct PathSer(Arc<PathBuf>);
 impl PathSer {
     pub fn new<P: Into<Arc<PathBuf>>>(path: P) -> Self {
         PathSer(path.into())
+    }
+
+    pub fn as_path(&self) -> &Path {
+        self.as_ref()
     }
 }
 
@@ -59,6 +63,11 @@ impl PathOps for PathSer {
 
     fn concat<P: AsRef<Path>>(&self, path: P) -> crate::Result<Self::Output> {
         Ok(PathSer(self.0.concat(path)?))
+    }
+
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        let buf = Path::join(self.as_path(), path);
+        Self::Output::new(buf)
     }
 
     fn with_file_name<S: AsRef<OsStr>>(&self, file_name: S) -> Self::Output {
@@ -117,7 +126,6 @@ impl<P: AsRef<str>> From<P> for PathSer {
         PathSer::new(PathBuf::from(path.as_ref()))
     }
 }
-
 
 impl From<PathSer> for Arc<PathBuf> {
     fn from(path: PathSer) -> Arc<PathBuf> {
@@ -241,7 +249,7 @@ impl<'de> Deserialize<'de> for PathDir {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{PathDir, PathFile, PathOps, PathType, PathInfo, PathMut};
+    use super::super::{PathDir, PathFile, PathInfo, PathMut, PathOps, PathType};
     use super::*;
 
     #[cfg(unix)]
@@ -297,7 +305,10 @@ mod tests {
     /// Just test that it has all the methods.
     fn sanity_ser() {
         let mut path = PathSer::from("example/path");
-        assert_eq!(path.join("joined"), Path::new("example/path/joined"));
+        assert_eq!(
+            path.join("joined").as_path(),
+            Path::new("example/path/joined")
+        );
         assert_eq!(path.is_absolute(), false);
 
         path.append("appended").unwrap();
@@ -305,6 +316,9 @@ mod tests {
         path.pop_up().unwrap();
         assert_eq!(path.as_path(), Path::new("example/path"));
 
-        assert_eq!(path.concat("/concated").unwrap().as_path(), Path::new("example/path/concated"));
+        assert_eq!(
+            path.concat("/concated").unwrap().as_path(),
+            Path::new("example/path/concated")
+        );
     }
 }

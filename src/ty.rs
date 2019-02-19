@@ -217,6 +217,11 @@ impl PathOps for PathType {
         }
     }
 
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        let buf = Path::join(self.as_path(), path);
+        Self::Output::new_unchecked(buf)
+    }
+
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
         match self {
             PathType::File(p) => p.with_file_name(file_name),

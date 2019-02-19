@@ -509,6 +509,11 @@ impl PathOps for PathDir {
         Ok(self.0.concat(path)?)
     }
 
+    fn join<P: AsRef<Path>>(&self, path: P) -> Self::Output {
+        let buf = Path::join(self.as_path(), path);
+        Self::Output::new_unchecked(buf)
+    }
+
     fn with_file_name<S: AsRef<ffi::OsStr>>(&self, file_name: S) -> Self::Output {
         self.0.with_file_name(file_name)
     }
