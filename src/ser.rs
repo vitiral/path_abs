@@ -135,7 +135,7 @@ impl From<PathSer> for Arc<PathBuf> {
 
 impl From<PathAbs> for PathSer {
     fn from(path: PathAbs) -> PathSer {
-        PathSer(path.0.clone())
+        PathSer(path.0)
     }
 }
 

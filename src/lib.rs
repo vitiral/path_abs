@@ -291,9 +291,9 @@ impl Error {
     /// Create a new error when the path and action are known.
     pub fn new(io_err: io::Error, action: &str, path: Arc<PathBuf>) -> Error {
         Error {
-            io_err: io_err,
+            io_err,
             action: action.into(),
-            path: path,
+            path,
         }
     }
 }

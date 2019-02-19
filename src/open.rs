@@ -31,7 +31,7 @@ impl FileOpen {
         let path = PathFile::new(path)?;
         Ok(FileOpen {
             path: path,
-            file: file,
+            file,
         })
     }
 
@@ -47,7 +47,7 @@ impl FileOpen {
 
         Ok(FileOpen {
             path: PathFile::new_unchecked(path),
-            file: file,
+            file,
         })
     }
 
@@ -80,7 +80,7 @@ impl FileOpen {
             .try_clone()
             .map_err(|err| Error::new(err, "cloning file handle for", self.path.clone().into()))?;
         Ok(FileOpen {
-            file: file,
+            file,
             path: self.path.clone(),
         })
     }
