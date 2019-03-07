@@ -29,10 +29,7 @@ impl FileOpen {
             .map_err(|err| Error::new(err, "opening", path.as_ref().to_path_buf().into()))?;
 
         let path = PathFile::new(path)?;
-        Ok(FileOpen {
-            path: path,
-            file,
-        })
+        Ok(FileOpen { path: path, file })
     }
 
     /// Shortcut to open the file if the path is already absolute.

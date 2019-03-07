@@ -129,9 +129,9 @@ impl<'a> Borrow<PathBuf> for &'a PathSer {
     }
 }
 
-impl<P: AsRef<str>> From<P> for PathSer {
+impl<P: Into<PathBuf>> From<P> for PathSer {
     fn from(path: P) -> PathSer {
-        PathSer::new(PathBuf::from(path.as_ref()))
+        PathSer::new(path.into())
     }
 }
 
@@ -141,11 +141,11 @@ impl From<PathSer> for Arc<PathBuf> {
     }
 }
 
-impl From<PathAbs> for PathSer {
-    fn from(path: PathAbs) -> PathSer {
-        PathSer(path.0)
-    }
-}
+// impl From<PathAbs> for PathSer {
+//     fn from(path: PathAbs) -> PathSer {
+//         PathSer(path.0)
+//     }
+// }
 
 impl<T> ToStfu8 for T
 where
@@ -273,6 +273,9 @@ mod tests {
 
         let tmp_dir = TempDir::new("example").expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
+
+        let ser_from_str = PathSer::from("example");
+        let ser_from_tmp_abs = PathSer::from(tmp_abs.as_path());
 
         let foo = PathFile::create(tmp_abs.concat("foo.txt").unwrap()).expect("foo.txt");
         let bar_dir = PathDir::create(tmp_abs.concat("bar").unwrap()).expect("bar");
