@@ -237,7 +237,7 @@ mod file;
 pub mod open;
 mod read;
 #[cfg(feature = "serialize")]
-mod ser;
+pub mod ser;
 mod ty;
 mod write;
 
