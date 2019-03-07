@@ -24,6 +24,14 @@ use super::{PathAbs, PathDir, PathFile};
 #[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct PathSer(Arc<PathBuf>);
 
+pub trait ToStfu8 {
+    fn to_stfu8(&self) -> String;
+}
+
+pub trait FromStfu8: Sized {
+    fn from_stfu8(s: &str) -> Result<Self, stfu8::DecodeError>;
+}
+
 impl PathSer {
     pub fn new<P: Into<Arc<PathBuf>>>(path: P) -> Self {
         PathSer(path.into())
@@ -137,14 +145,6 @@ impl From<PathAbs> for PathSer {
     fn from(path: PathAbs) -> PathSer {
         PathSer(path.0)
     }
-}
-
-trait ToStfu8 {
-    fn to_stfu8(&self) -> String;
-}
-
-trait FromStfu8: Sized {
-    fn from_stfu8(s: &str) -> Result<Self, stfu8::DecodeError>;
 }
 
 impl<T> ToStfu8 for T
