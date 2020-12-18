@@ -268,6 +268,13 @@ mod tests {
     use super::super::{PathDir, PathFile, PathInfo, PathMut, PathOps, PathType};
     use super::*;
 
+    #[cfg(target_os = "wasi")]
+    static SERIALIZED: &str = "[\
+                               {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
+                               {\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}\
+                               ]";
+
     #[cfg(unix)]
     static SERIALIZED: &str = "[\
                                {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\

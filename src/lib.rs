@@ -203,8 +203,8 @@
 //! [`PathOps`]: trait.PathOps.html
 //! [`PathMut`]: trait.PathMut.html
 
-#![cfg(target_os = "wasi")]
-#![feature(wasi_ext)]
+#![cfg_attr(target_os = "wasi",
+            feature(wasi_ext))]
 
 #[cfg(feature = "serialize")]
 extern crate serde;
