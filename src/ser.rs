@@ -153,13 +153,7 @@ impl<T> ToStfu8 for T
 where
     T: Borrow<PathBuf>,
 {
-    #[cfg(target_os = "wasi")]
-    fn to_stfu8(&self) -> String {
-        let bytes = self.borrow().as_os_str().as_bytes();
-        stfu8::encode_u8(bytes)
-    }
-
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     fn to_stfu8(&self) -> String {
         let bytes = self.borrow().as_os_str().as_bytes();
         stfu8::encode_u8(bytes)
@@ -176,15 +170,7 @@ impl<T> FromStfu8 for T
 where
     T: From<PathBuf>,
 {
-    #[cfg(target_os = "wasi")]
-    fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
-        let raw_path = stfu8::decode_u8(s)?;
-        let os_str = OsString::from_vec(raw_path);
-        let pathbuf: PathBuf = os_str.into();
-        Ok(pathbuf.into())
-    }
-
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u8(s)?;
         let os_str = OsString::from_vec(raw_path);
@@ -268,14 +254,7 @@ mod tests {
     use super::super::{PathDir, PathFile, PathInfo, PathMut, PathOps, PathType};
     use super::*;
 
-    #[cfg(target_os = "wasi")]
-    static SERIALIZED: &str = "[\
-                               {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
-                               {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
-                               {\"type\":\"dir\",\"path\":\"{0}/foo/bar\"}\
-                               ]";
-
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     static SERIALIZED: &str = "[\
                                {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
                                {\"type\":\"dir\",\"path\":\"{0}/bar\"},\
