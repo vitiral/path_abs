@@ -14,6 +14,8 @@ use stfu8;
 use super::{PathMut, PathOps};
 
 use std::ffi::{OsStr, OsString};
+#[cfg(target_os = "wasi")]
+use std::os::wasi::ffi::{OsStrExt, OsStringExt};
 #[cfg(unix)]
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
 #[cfg(windows)]
@@ -151,7 +153,7 @@ impl<T> ToStfu8 for T
 where
     T: Borrow<PathBuf>,
 {
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     fn to_stfu8(&self) -> String {
         let bytes = self.borrow().as_os_str().as_bytes();
         stfu8::encode_u8(bytes)
@@ -168,7 +170,7 @@ impl<T> FromStfu8 for T
 where
     T: From<PathBuf>,
 {
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     fn from_stfu8(s: &str) -> Result<T, stfu8::DecodeError> {
         let raw_path = stfu8::decode_u8(s)?;
         let os_str = OsString::from_vec(raw_path);
@@ -252,7 +254,7 @@ mod tests {
     use super::super::{PathDir, PathFile, PathInfo, PathMut, PathOps, PathType};
     use super::*;
 
-    #[cfg(unix)]
+    #[cfg(any(target_os = "wasi", unix))]
     static SERIALIZED: &str = "[\
                                {\"type\":\"file\",\"path\":\"{0}/foo.txt\"},\
                                {\"type\":\"dir\",\"path\":\"{0}/bar\"},\

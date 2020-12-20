@@ -523,6 +523,12 @@ impl PathOps for PathDir {
     }
 }
 
+#[cfg(target_os = "wasi")]
+fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
+    let file = std::fs::File::open(&src)?;
+    std::os::wasi::fs::symlink(src, &file, dst)
+}
+
 #[cfg(unix)]
 fn symlink_dir<P: AsRef<Path>, Q: AsRef<Path>>(src: P, dst: Q) -> io::Result<()> {
     ::std::os::unix::fs::symlink(src, dst)
