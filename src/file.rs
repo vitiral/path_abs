@@ -106,15 +106,15 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
     /// let file = PathFile::create(example)?;
@@ -137,12 +137,12 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -161,12 +161,12 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -192,12 +192,12 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -221,13 +221,13 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::io::Read;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -249,13 +249,13 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::io::Write;
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -279,13 +279,13 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::io::{Read, Seek, Write, SeekFrom};
     /// use path_abs::PathFile;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     ///
@@ -310,14 +310,14 @@ impl PathFile {
     ///
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
     /// let example_bk = "example.txt.bk";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// # let example_bk = &tmp.path().join(example_bk);
     /// let file = PathFile::create(example)?;
@@ -347,14 +347,14 @@ impl PathFile {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
     /// let example_bk = "example.txt.bk";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// # let example_bk = &tmp.path().join(example_bk);
     /// let file = PathFile::create(example)?;
@@ -385,14 +385,14 @@ impl PathFile {
     ///
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathFile;
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
     /// let example_sym = "example.txt.sym";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// # let example_sym = &tmp.path().join(example_sym);
     /// let file = PathFile::create(example)?;
@@ -426,13 +426,13 @@ impl PathFile {
     ///
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::{PathFile, PathInfo};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example.txt";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// let file = PathFile::create(example)?;
     /// assert!(file.exists());

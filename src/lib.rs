@@ -112,7 +112,7 @@
 //!
 //! ```rust
 //! # extern crate path_abs;
-//! # extern crate tempdir;
+//! # extern crate tempfile;
 //! use std::path::Path;
 //! use std::collections::HashSet;
 //! use path_abs::{
@@ -129,7 +129,7 @@
 //!
 //! # fn try_main() -> ::std::io::Result<()> {
 //! let example = Path::new("example");
-//! # let tmp = tempdir::TempDir::new("ex")?;
+//! # let tmp = tempfile::TempDir::new()?;
 //! # let example = &tmp.path().join(example);
 //!
 //! // Create your paths
@@ -223,7 +223,7 @@ extern crate regex;
 #[cfg(test)]
 extern crate serde_json;
 #[cfg(test)]
-extern crate tempdir;
+extern crate tempfile;
 
 use std::error;
 use std::ffi;
@@ -971,7 +971,7 @@ impl PathOps for Arc<PathBuf> {
 #[cfg(test)]
 mod tests {
     use regex::{self, Regex};
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     use super::*;
 
@@ -995,7 +995,7 @@ mod tests {
     #[test]
     /// Tests to make sure the error messages look like we expect.
     fn sanity_errors() {
-        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_dir = TempDir::new().expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
         {

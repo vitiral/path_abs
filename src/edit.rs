@@ -21,13 +21,13 @@ use super::{Error, PathAbs, PathInfo, Result};
 /// # Examples
 /// ```rust
 /// # extern crate path_abs;
-/// # extern crate tempdir;
+/// # extern crate tempfile;
 /// use std::io::{Read, Seek, Write, SeekFrom};
 /// use path_abs::FileEdit;
 ///
 /// # fn try_main() -> ::std::io::Result<()> {
 /// let example = "example.txt";
-/// # let tmp = tempdir::TempDir::new("ex")?;
+/// # let tmp = tempfile::TempDir::new()?;
 /// # let example = &tmp.path().join(example);
 ///
 /// let expected = "foo\nbar";

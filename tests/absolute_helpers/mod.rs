@@ -6,7 +6,7 @@ use std::path;
 use path_abs::PathAbs;
 use path_abs::PathInfo;
 
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 fn symlink_dir<P, Q>(src: P, dst: Q)
 where
@@ -73,7 +73,7 @@ fn absolute_path_removes_empty_component() {
 #[test]
 fn absolute_path_lexically_resolves_parentdir_component() {
     crate::setup();
-    let tmp_dir = TempDir::new("normalize_parentdir").unwrap();
+    let tmp_dir = TempDir::new().unwrap();
     let a_dir = tmp_dir.path().join("a");
     fs::create_dir_all(&a_dir).unwrap();
 

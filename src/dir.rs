@@ -106,12 +106,12 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathDir;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
     /// let dir = PathDir::create(example)?;
@@ -142,12 +142,12 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::PathDir;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example/long/path";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
     /// let path = PathDir::create_all(example)?;
@@ -185,13 +185,13 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::collections::HashSet;
     /// use path_abs::{PathDir, PathFile, PathType, PathOps};
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join("example");
     ///
     /// let example_dir = PathDir::create(example)?;
@@ -223,13 +223,13 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::path::Path;
     /// use path_abs::PathDir;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = Path::new("example/long/path");
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
     /// let dir = PathDir::create_all(example)?;
@@ -251,13 +251,13 @@ impl PathDir {
     /// # Examples
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use std::path::Path;
     /// use path_abs::PathDir;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = Path::new("example/long/path");
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     ///
     /// let dir = PathDir::create_all(example)?;
@@ -280,14 +280,14 @@ impl PathDir {
     ///
     /// ```rust
     /// # extern crate path_abs;
-    /// # extern crate tempdir;
+    /// # extern crate tempfile;
     /// use path_abs::{PathDir, PathFile, PathOps};
     /// use std::path::Path;
     ///
     /// # fn try_main() -> ::std::io::Result<()> {
     /// let example = "example";
     /// let example_sym = "example_sym";
-    /// # let tmp = tempdir::TempDir::new("ex")?;
+    /// # let tmp = tempfile::TempDir::new()?;
     /// # let example = &tmp.path().join(example);
     /// # let example_sym = &tmp.path().join(example_sym);
     /// let dir = PathDir::create(example)?;
@@ -472,11 +472,11 @@ impl From<PathDir> for PathBuf {
 mod tests {
     use super::super::{PathAbs, PathDir, PathFile, PathOps, PathType};
     use std::collections::HashSet;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn sanity_list() {
-        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_dir = TempDir::new().expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).unwrap();
 
         let foo_path = tmp_abs.concat("foo").expect("path foo");
