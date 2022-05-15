@@ -271,9 +271,9 @@ mod tests {
     #[test]
     fn sanity_serde() {
         use serde_json;
-        use tempdir::TempDir;
+        use tempfile::TempDir;
 
-        let tmp_dir = TempDir::new("example").expect("create temp dir");
+        let tmp_dir = TempDir::new().expect("create temp dir");
         let tmp_abs = PathDir::new(tmp_dir.path()).expect("tmp_abs");
 
         let ser_from_str = PathSer::from("example");

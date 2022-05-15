@@ -12,7 +12,7 @@
 
 #[macro_use]
 extern crate pretty_assertions;
-use tempdir;
+use tempfile;
 
 use path_abs::*;
 use std::env;
@@ -29,7 +29,7 @@ fn test_absolute() {
             result
         );
     }
-    let tmp = tempdir::TempDir::new("ex").unwrap();
+    let tmp = tempfile::TempDir::new().unwrap();
     let tmp = tmp.path();
     let tmp_abs = PathAbs::new(&tmp).unwrap();
     env::set_current_dir(&tmp_abs).unwrap();
@@ -111,7 +111,7 @@ fn test_absolute() {
 /// After calling join(), the metadata are accessed to check that the computed path is valid.
 #[test]
 fn test_forward_and_backward_slashes() {
-    let tmp = tempdir::TempDir::new("ex").unwrap();
+    let tmp = tempfile::TempDir::new().unwrap();
     let tmp = tmp.path();
 
     // Create directories:
